@@ -481,6 +481,18 @@ public class dataController {
 		if (identifier.equals("movie")) {
 			createIndexesMovieDB(graphDB);
 		}
+		if (identifier.equals("general_tests")) {
+			createIndexesGeneralTests(graphDB);
+		}
+	}
+
+	private void createIndexesGeneralTests(GraphDatabaseService graphDB) {
+		try (Transaction tx = graphDB.beginTx()) {
+			// QUERY 1
+			String queryindex = "CREATE INDEX name IF NOT EXISTS FOR (u:node) ON (u.name);";
+			tx.execute(queryindex);
+			tx.commit();
+		}
 	}
 
 	public void createIndexesDeezerDBByCypher(GraphDatabaseService graphDB) {
@@ -819,5 +831,54 @@ public class dataController {
 		createIndexes(graphDB, "cooccs");
 		System.out.println("LOADING BY METHODS");
 		loadEdgeListbyMethods(graphDB, inputfile, ',', 0, "cooccs");
+	}
+
+	/**
+	 * This method is just creating nodes
+	 * 
+	 * @param amount
+	 */
+	public void createNodes(int amount) {
+		int counter = 0;
+		long createTime = System.currentTimeMillis();
+		try (Transaction tx = graphDB.beginTx()) {
+			for (int i = 0; i < amount; i++) {
+				Node tmpNode = tx.createNode(enums.Labels.SINGLE_NODE);
+				tmpNode.setProperty("name", i);
+			}
+			tx.commit();
+		}
+		System.out.println("##### NODECREATION OF " + amount + " NODES TOOK: " + (System.currentTimeMillis() - createTime) + "ms.");
+	}
+
+	/**
+	 * This method gets all nodes and connects them to each other.
+	 * 
+	 */
+	public void makeCompleteGraph() {
+		int relcounter = 0;
+		int nodeCounter = 0;
+		int i = 0;
+		int j = 0;
+		long createTime = System.currentTimeMillis();
+	    ArrayList<Node> nodeList = null;
+		try (Transaction tx = graphDB.beginTx()) {
+			for (Node tmpNode: tx.getAllNodes()) {
+				nodeList.add(tmpNode);
+			}
+			for (i = 0; i < nodeList.size()-1; i++) {
+				for (j = i + 1; j < nodeList.size()-1; j++) {
+					Node node1 = nodeList.get(i);
+					Node node2 = nodeList.get(j);
+					if (!node2.getProperties("name").equals(node1.getProperty("name"))) {
+						Relationship relationship1 = node1.createRelationshipTo(node2, enums.RelationshipTypes.IS_CONNECTED);
+						Relationship relationship2 = node2.createRelationshipTo(node1, enums.RelationshipTypes.IS_CONNECTED);
+						relcounter = relcounter + 2;
+					}
+				}
+			}
+			tx.commit();
+		}
+		System.out.println("##### RELATIONSHIP CREATION OF " + relcounter + " RELATIONS TOOK: " + (System.currentTimeMillis() - createTime) + "ms.");
 	}
 }

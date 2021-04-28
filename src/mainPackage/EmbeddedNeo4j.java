@@ -48,7 +48,7 @@ public class EmbeddedNeo4j {
 	 * - neo4j.conf file not necessary
 	 */
 	
-//	private static final String databaseConfig = "/home/pagai/graph-data/general_db_data/conf/neo4j.conf";
+	private static final String databaseConfig = "/home/pagai/graph-data/general_db_data/conf/neo4j.conf";
 //	private static final File inputFolder = new File("/home/pagai/graph-data/");
 //	private static final File importFolder = new File("/var/lib/neo4j/import/");
 //	private static final File pluginsFolder = new File("/home/pagai/graph-data/general_db_data/plugins");
@@ -67,15 +67,20 @@ public class EmbeddedNeo4j {
 //	private static String identifier = "deezer";
 
 	// COOCCSDB
-	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
-	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
-	private static String identifier = "cooccs";
-	
+//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
+//	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
+//	private static String identifier = "cooccs";
+//	
 //	// COOCCSDB_EXTERNAL
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
 //	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
 //	private static String identifier = "cooccs";
 
+//	// GENERAL TESTS
+	private static final Path databaseDirectory = new File("/home/pagai/graph-data/general_tests/").toPath();
+	private static final File inputFile = new File("/home/pagai/graph-data/general_tests.csv");
+	private static String identifier = "general_tests";
+	
 	//	########################################################
 
 	// Setting config.
@@ -96,34 +101,40 @@ public class EmbeddedNeo4j {
 		System.out.print("BUILDING DATABASE...");
 		long buildTime = System.currentTimeMillis();
 
+// 		################ GENERAL TESTS ################
+//		
+		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
+		
+		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
+		System.out.println("USING DATABASE: " + databaseDirectory);
+		graphDB = managementService.database("neo4j");
+		
+		registerShutdownHook(managementService);
+		dataController myDataController = new dataController(graphDB);
+		
+		int amount = 10;
+		myDataController.clearDB(graphDB);
+//		myDataController.clearIndexes(graphDB);
+////		myDataController.createIndexes(graphDB, identifier);
+		myDataController.createNodes(amount);
+		myDataController.makeCompleteGraph();
+//		myDataController.printAll(graphDB);
+		
+// 		################ DEEZER DATABASE ################
+//		
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
+//		
 //		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
-//		System.out.println("USING DATABASE: " + databaseDirectory);
+//		System.out.println("USING DATABASE: " + databaseDirectory_deezer);
 //		graphDB = managementService.database("neo4j");
 //		
 //		registerShutdownHook(managementService);
 //		dataController myDataController = new dataController(graphDB);
-
+//		
+//		
 //		myDataController.runDeezerImportByMethods(inputFile);
-//		myDataController.runDeezerImportByCypher(inputFile);
-
-//		myDataController.printAll(graphDB);
-
-// 		################ DEEZER DATABASE ################
-//		
-//		managementServiceDeezer = new DatabaseManagementServiceBuilder(databaseDirectory_deezer).setConfigRaw(config).build();
-//		
-//		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
-//		System.out.println("USING DATABASE: " + databaseDirectory_deezer);
-//		graphDB_deezer = managementServiceDeezer.database("neo4j");
-//		
-//		registerShutdownHook(managementServiceDeezer);
-//		dataController myDeezerDataController = new dataController(graphDB_deezer);
-//		
-//		
-//		myDeezerDataController.runDeezerImportByMethods(inputFile_deezer);
-////		myDeezerDataController.runDeezerImportByCypher(inputFile_deezer);
-		// myDeezerDataController.printAll(graphDB_deezer);
+////		myDataController.runDeezerImportByCypher(inputFile);
+		// myDataController.printAll(graphDB);
 
 //		################ MOVIEDATABASE ################
 //		managementServiceMovies = new DatabaseManagementServiceBuilder(databaseDirectory_movies).setConfigRaw(config).build();
@@ -145,14 +156,14 @@ public class EmbeddedNeo4j {
 //		################ COOCCS DATABASE ################
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).build();
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).loadPropertiesFromFile(databaseConfig).build();
-		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
-
-		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
-		System.out.println("USING DATABASE: " + databaseDirectory);
-		graphDB = managementService.database(DEFAULT_DATABASE_NAME);
+//		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
+//
+//		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
+//		System.out.println("USING DATABASE: " + databaseDirectory);
+//		graphDB = managementService.database(DEFAULT_DATABASE_NAME);
+//		dataController myDataController = new dataController(graphDB);
 
 		if (cleanAndCreate) {
-			dataController myDataController = new dataController(graphDB);
 			myDataController.clearDB(graphDB);
 			myDataController.clearIndexes(graphDB);
 			myDataController.createIndexes(graphDB, identifier);
@@ -223,12 +234,12 @@ public class EmbeddedNeo4j {
 		
 		
 		ExEngine = new ExecutionEngine(graphDB);
-		ExEngine.runQuery(createGraphByCypher, true, false);
+//		ExEngine.runQuery(createGraphByCypher, true, false);
 		
 //		ExEngine.runQuery(betweenness, true, false);
-		ExEngine.runQuery(hits, true, false);
+//		ExEngine.runQuery(hits, true, false);
 
-//		ExEngine.exportDBtoFile(outputFile, true);
+		ExEngine.exportDBtoFile(outputFile, true, false);
 
 //		String endNode = "bums";
 //		String startNode = "bums";

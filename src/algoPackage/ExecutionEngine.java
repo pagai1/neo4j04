@@ -51,6 +51,7 @@ public class ExecutionEngine {
 	 * The file will be written to the DBs import folder.
 	 * @param outputFile - The String of the outputfilename.
 	 * @param verbose - Print out result or not.
+	 * @param extraLinebreak - is there an additional linebreak necessary for the output? Helpful for multiline-results.
 	 */
 	public void exportDBtoFile(String outputFile, Boolean verbose, Boolean extraLinebreak) {
 		String query = "CALL apoc.export.csv.all(\"" + outputFile + "\", {})";
