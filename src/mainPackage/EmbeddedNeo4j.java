@@ -67,9 +67,9 @@ public class EmbeddedNeo4j {
 //	private static String identifier = "deezer";
 
 	// COOCCSDB
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
-//	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
-//	private static String identifier = "cooccs";
+	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
+	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
+	private static String identifier = "cooccs";
 //	
 //	// COOCCSDB_EXTERNAL
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
@@ -77,9 +77,9 @@ public class EmbeddedNeo4j {
 //	private static String identifier = "cooccs";
 
 //	// GENERAL TESTS
-	private static final Path databaseDirectory = new File("/home/pagai/graph-data/general_tests/").toPath();
-	private static final File inputFile = new File("/home/pagai/graph-data/general_tests.csv");
-	private static String identifier = "general_tests";
+//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/general_tests/").toPath();
+//	private static final File inputFile = new File("/home/pagai/graph-data/general_tests.csv");
+//	private static String identifier = "general_tests";
 	
 	//	########################################################
 
@@ -103,22 +103,22 @@ public class EmbeddedNeo4j {
 
 // 		################ GENERAL TESTS ################
 //		
-		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
-		
-		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
-		System.out.println("USING DATABASE: " + databaseDirectory);
-		graphDB = managementService.database("neo4j");
-		
-		registerShutdownHook(managementService);
-		dataController myDataController = new dataController(graphDB);
-		
-		int amount = 10;
-		myDataController.clearDB(graphDB);
-//		myDataController.clearIndexes(graphDB);
-////		myDataController.createIndexes(graphDB, identifier);
-		myDataController.createNodes(amount);
-		myDataController.makeCompleteGraph();
-//		myDataController.printAll(graphDB);
+//		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
+//		
+//		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
+//		System.out.println("USING DATABASE: " + databaseDirectory);
+//		graphDB = managementService.database("neo4j");
+//		
+//		registerShutdownHook(managementService);
+//		dataController myDataController = new dataController(graphDB);
+//		
+//		int amount = 10;
+//		myDataController.clearDB(graphDB);
+////		myDataController.clearIndexes(graphDB);
+//////		myDataController.createIndexes(graphDB, identifier);
+//		myDataController.createNodes(amount);
+//		myDataController.makeCompleteGraph();
+////		myDataController.printAll(graphDB);
 		
 // 		################ DEEZER DATABASE ################
 //		
@@ -156,12 +156,12 @@ public class EmbeddedNeo4j {
 //		################ COOCCS DATABASE ################
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).build();
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).loadPropertiesFromFile(databaseConfig).build();
-//		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
-//
-//		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
-//		System.out.println("USING DATABASE: " + databaseDirectory);
-//		graphDB = managementService.database(DEFAULT_DATABASE_NAME);
-//		dataController myDataController = new dataController(graphDB);
+		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
+
+		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
+		System.out.println("USING DATABASE: " + databaseDirectory);
+		graphDB = managementService.database(DEFAULT_DATABASE_NAME);
+		dataController myDataController = new dataController(graphDB);
 
 		if (cleanAndCreate) {
 			myDataController.clearDB(graphDB);
@@ -234,12 +234,11 @@ public class EmbeddedNeo4j {
 		
 		
 		ExEngine = new ExecutionEngine(graphDB);
-//		ExEngine.runQuery(createGraphByCypher, true, false);
-		
-//		ExEngine.runQuery(betweenness, true, false);
+		ExEngine.runQuery(createGraphByCypher, true, false);
+		ExEngine.runQuery(betweenness, true, false);
 //		ExEngine.runQuery(hits, true, false);
 
-		ExEngine.exportDBtoFile(outputFile, true, false);
+//		ExEngine.exportDBtoFile(outputFile, true, false);
 
 //		String endNode = "bums";
 //		String startNode = "bums";
