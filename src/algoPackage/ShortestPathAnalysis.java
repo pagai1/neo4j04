@@ -36,7 +36,7 @@ import org.neo4j.graphdb.Node;
 public class ShortestPathAnalysis {
 
 	private static GraphDatabaseService graphDB;
-	private static long startTime;
+	private static double startTime;
 	private static long endTime;
 	private static long runTime;
 	private static long fullStartTime;
@@ -131,14 +131,14 @@ public class ShortestPathAnalysis {
 				startTime = System.currentTimeMillis();
 				Node startNode = nodeList.get(i);
 //				System.out.print("STARTNODE: " + startNode.getProperty("name") + " ");
-				for (int j = i + 1; j < nodeCount; j++) {
-
+//				for (int j = i + 1; j < nodeCount; j++) {
+				for (int j = 0; j < nodeCount; j++) {
 					Node endNode = nodeList.get(j);
 //					System.out.println(endNode.getProperty("name"));
 
 					executeFinderShortestPath(startNode, endNode, finderShortestPath);
 
-					executeFinderDijkstra(startNode, endNode, finderDijkstra);
+//					executeFinderDijkstra(startNode, endNode, finderDijkstra);
 				}
 //				System.out.println("END: " + (System.currentTimeMillis() - startTime) + "ms.");
 			}
@@ -153,7 +153,7 @@ public class ShortestPathAnalysis {
 	 * @param finderShortestPath
 	 */
 	public void executeFinderShortestPath(Node startNode, Node endNode, PathFinder<Path> finderShortestPath) {
-		startTime = System.currentTimeMillis();
+		startTime = System.nanoTime();
 		Path singleShortestPath = finderShortestPath.findSinglePath(startNode, endNode);
 		print_path(singleShortestPath, startNode, endNode);
 //
@@ -166,7 +166,7 @@ public class ShortestPathAnalysis {
 //		} else {
 //			System.out.print("NO PATH - ");
 //		}
-		System.out.println((System.currentTimeMillis() - startTime) + "ms.");
+		System.out.printf("%.9f s.\n", (double)((System.nanoTime() - startTime)/1000000000.0) );
 	}
 
 	/**

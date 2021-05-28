@@ -1,3 +1,4 @@
+
 package dataPackage;
 
 import java.io.File;
@@ -30,7 +31,7 @@ public class dataController {
 	private static BufferedReader reader;
 	private static BufferedReader reader2;
 
-	public static int linecount = 0;
+	public static int lineCountLimit = 0;
 
 	public static List<String> full_actor_list = new ArrayList<String>();
 	public static List<String> full_director_list = new ArrayList<String>();
@@ -62,20 +63,20 @@ public class dataController {
 		createIndexesDeezerDBByCypher(graphDB);
 		System.out.println("LOADING BY CYPHER");
 		loadEdgeListbyCypher(graphDB, inputFile_deezer, ',');
-//		loadEdgeListbyCypherNodesAndRelations(graphDB, inputFile_deezer, ',');
-//		loadEdgeListbyCypherInOne(graphDB, inputFile_deezer, ',');
+		loadEdgeListbyCypherNodesAndRelations(graphDB, inputFile_deezer, ',');
+		loadEdgeListbyCypherInOne(graphDB, inputFile_deezer, ',');
 
 	}
 
 	/**
-	 * @param myDeezerDataController
+	 * Loads given number (limit) of lines from edgeList.
+	 * 
+	 * @param inputFile_deezer path to file
+	 * @param limit            number of lines to be loaded from inputfile
 	 */
-	public void runDeezerImportByMethods(File inputFile_deezer) {
-		clearDB(graphDB);
-		clearIndexes(graphDB);
-		createIndexesDeezerDBByCypher(graphDB);
-		System.out.println("LOADING BY METHODS");
-		loadEdgeListbyMethods(graphDB, inputFile_deezer, ',', 0, "deezer");
+	public void runDeezerImportByMethods(File inputFile, int limit) {
+		System.out.println("LOADING DEEZER EDGELIST BY METHODS");
+		loadEdgeListbyMethods(graphDB, inputFile, ',', limit, "deezer");
 	}
 
 	public int getNumberOfLines(File inputFile) throws IOException {
@@ -91,29 +92,31 @@ public class dataController {
 	/**
 	 * Loads data from given CSV file.
 	 * 
-	 * @param inputFile    - the inputfile to be loaded
-	 * @param delimiterm   - the delimiter character
-	 * @param inputgraphDb - the database to load the data in
-	 * @param clearGraph   - if true the graph will be cleared before inserting
+	 * @param inputFile    - The inputfile to be loaded.
+	 * @param delimiterm   - The delimiter character.
+	 * @param inputgraphDb - The database to load the data in.
+	 * @param clearGraph   - If true the graph will be cleared before inserting.
+	 * @param limit        - max-linenumber. "all" if "0".
 	 */
 	public void loadDataFromCSVFile(File inputFile, String delimiterm, GraphDatabaseService inputgraphDb, boolean clearGraph, int limit) {
 
 		try {
 			if (limit == 0) {
-				linecount = getNumberOfLines(inputFile) - 1;
+				lineCountLimit = getNumberOfLines(inputFile) - 1;
 			} else {
-				linecount = limit;
+				lineCountLimit = limit;
 //				linecount = 100;	
 			}
 
-			System.out.println("LOADING " + linecount + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
+			System.out.println("LOADING " + lineCountLimit + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
 			String[] headers, headers2;
 			startTime = System.currentTimeMillis();
 			reader = new BufferedReader(new FileReader(inputFile));
 			reader2 = new BufferedReader(new FileReader(inputFile));
 
 			// Reads headers
-			// Crazy splitting is needed because of "," within the "overview" column which
+			// Crazy splitting is needed because of ","(additional comma) within the
+			// "overview" column which
 			// describes the movie.
 			headers = reader.readLine().split((",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"));
 			headers2 = reader2.readLine().split((",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"));
@@ -121,12 +124,12 @@ public class dataController {
 //			System.out.println("HEADERS: " + Arrays.toString(headers));
 
 			if (clearGraph) {
-				clearDB(graphDB);
+				clearDB(graphDB, true);
 			}
 			readFile(graphDB, reader, headers, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list);
 
 			readFile2(graphDB, reader2, headers2, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list);
-			System.out.println("READ " + linecount + " ENTRIES IN " + (System.currentTimeMillis() - startTime) + " ms.");
+			System.out.println("READ " + lineCountLimit + " ENTRIES IN " + (System.currentTimeMillis() - startTime) + " ms.");
 //			printAll(graphDB);
 
 		} catch (IOException e) {
@@ -137,11 +140,13 @@ public class dataController {
 	/**
 	 * Removes all nodes and all relationships within graph.
 	 * 
-	 * @param inputgraphDb
+	 * @param inputgraphDb - the graphdatabase
+	 * @param verbose      - give output
 	 */
-	public void clearDB(GraphDatabaseService inputgraphDb) {
+	public void clearDB(GraphDatabaseService inputgraphDb, Boolean verbose) {
 		try (Transaction tx = inputgraphDb.beginTx()) {
-			System.out.print("REMOVING ALL RELATIONSHIPS...");
+			if (verbose)
+				System.out.print("REMOVING ALL RELATIONSHIPS...");
 			int relCount = 0;
 			startTime = System.currentTimeMillis();
 			Iterable<Relationship> allRelationships = tx.getAllRelationships();
@@ -149,15 +154,18 @@ public class dataController {
 				relCount = relCount + 1;
 				relationship.delete();
 			}
-			System.out.println("took " + (System.currentTimeMillis() - startTime) + " ms.");
-			System.out.print("COMMITTING DELETION OF " + relCount + " RELATIONS.");
-			startTime = System.currentTimeMillis();
+			if (verbose)
+				System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
+			if (verbose)
+				System.out.println("COMMITTING DELETION OF " + relCount + " RELATIONS.");
+//			startTime = System.currentTimeMillis();
 			tx.commit();
-			System.out.println("took " + (System.currentTimeMillis() - startTime) + "ms.");
+			if (verbose)
+				System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
 		}
 		try (Transaction tx = inputgraphDb.beginTx()) {
-			System.out.print("REMOVING NODES...");
-//			System.out.println("NUMBER OF NODES TO REMOVE: " + nodeList.iterator().stream().count());
+			if (verbose)
+				System.out.print("REMOVING NODES...");
 			startTime = System.currentTimeMillis();
 			ResourceIterable<Node> nodeList = tx.getAllNodes();
 			int nodeCount = 0;
@@ -165,13 +173,14 @@ public class dataController {
 				nodeCount = nodeCount + 1;
 				nodetodelete.delete();
 			}
-			System.out.println("took " + (System.currentTimeMillis() - startTime) + " ms.");
-//				System.out.println("REMOVING: " + tempNode.getProperty("name"));
-
-			System.out.print("COMMITTING DELETION OF " + nodeCount + " NODES.");
-			startTime = System.currentTimeMillis();
+			if (verbose)
+				System.out.println("REMOVED " + nodeCount + " NODES. THIS TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
+			if (verbose)
+				System.out.println("COMMITTING DELETION OF " + nodeCount + " NODES.");
+//			startTime = System.currentTimeMillis();
 			tx.commit();
-			System.out.println("took " + (System.currentTimeMillis() - startTime) + "ms.");
+			if (verbose)
+				System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
 		}
 	}
 
@@ -196,7 +205,7 @@ public class dataController {
 
 		int count = 0;
 		try (Transaction tx = graphDB.beginTx()) {
-			while ((movieline != null) & count < (linecount - 1)) {
+			while ((movieline != null) & count < (lineCountLimit - 1)) {
 				movieline = reader.readLine().split((",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"));
 				count++;
 //				System.out.println("MOVIELINE1: " + count);
@@ -320,7 +329,7 @@ public class dataController {
 		int count2 = 0;
 
 		try (Transaction tx = graphDB.beginTx()) {
-			while ((movieline != null) & count2 < (linecount - 1)) {
+			while ((movieline != null) & count2 < (lineCountLimit - 1)) {
 				movieline = reader.readLine().split((",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"));
 				count2++;
 //				System.out.println("MOVIELINE2: " + count2);
@@ -471,12 +480,12 @@ public class dataController {
 		}
 	}
 
-	public void createIndexes(GraphDatabaseService graphDB, String identifier) {
+	public void createIndexes(GraphDatabaseService graphDB, String identifier, boolean verbose) {
 		if (identifier.equals("cooccs")) {
-			createIndexesCooccsDB(graphDB);
+			createIndexesCooccsDB(graphDB, verbose);
 		}
 		if (identifier.equals("deezer")) {
-			createIndexesDeezerDB(graphDB);
+			createIndexesDeezerDB(graphDB, verbose);
 		}
 		if (identifier.equals("movie")) {
 			createIndexesMovieDB(graphDB);
@@ -510,17 +519,17 @@ public class dataController {
 	 * @param graphDB
 	 */
 	@SuppressWarnings("unused")
-	public void createIndexesCooccsDB(GraphDatabaseService graphDB) {
+	public void createIndexesCooccsDB(GraphDatabaseService graphDB, boolean verbose) {
 		startTime = System.currentTimeMillis();
 		IndexDefinition userIndex;
 		startTime = System.currentTimeMillis();
 		IndexDefinition wordNamesIndex;
-		System.out.println("CREATING INDEX FOR SINGLE_NODE NAME");
+		if (verbose) System.out.println("CREATING INDEX FOR SINGLE_NODE NAME");
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
 			wordNamesIndex = schema.indexFor(Labels.SINGLE_NODE).on("name").withName("wordnames").create();
 			tx.commit();
-			tx.close();
+			if (verbose) System.out.println("CREATED INDEX ON WORDS IN " + (System.currentTimeMillis() - startTime) + "ms");
 		} catch (Exception e) {
 			System.out.println("There was already an index.");
 		}
@@ -531,6 +540,7 @@ public class dataController {
 //			tx.commit();
 //			System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
 //		}
+
 	}
 
 	@SuppressWarnings("unused")
@@ -539,15 +549,17 @@ public class dataController {
 	 * 
 	 * @param graphDB
 	 */
-	public void createIndexesDeezerDB(GraphDatabaseService graphDB) {
+	public void createIndexesDeezerDB(GraphDatabaseService graphDB, boolean verbose) {
 		startTime = System.currentTimeMillis();
 		IndexDefinition userIndex;
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
-			userIndex = schema.indexFor(Labels.USER).on("name").withName("actornames").create();
+			userIndex = schema.indexFor(Labels.USER).on("name").withName("usernames").create();
 			tx.commit();
-			System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
+			if (verbose) System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
+		} catch (Exception e) {
+			System.out.println("There was already an index.");
 		}
 
 //		try (Transaction tx = graphDB.beginTx()) {
@@ -619,24 +631,27 @@ public class dataController {
 	}
 
 	/**
-	 * Removes all indexes from given DB.
+	 * Removes all constraintdefitions and indexes from given DB.
 	 * 
-	 * @param graphDB
+	 * @param graphDB - the database instance
+	 * @param verbose - print stuff
 	 */
-	public void clearIndexes(GraphDatabaseService graphDB) {
-		System.out.print("REMOVING INDEXES...");
+	public void clearIndexes(GraphDatabaseService graphDB, Boolean verbose) {
+		if (verbose)
+			System.out.print("REMOVING INDEXES...");
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			for (ConstraintDefinition constraintDefinition : tx.schema().getConstraints()) {
 				constraintDefinition.drop();
 			}
-			for (IndexDefinition label : tx.schema().getIndexes()) {
-				label.drop();
+			for (IndexDefinition index : tx.schema().getIndexes()) {
+				index.drop();
 			}
 			tx.commit();
 			tx.close();
 		}
-		System.out.println("took " + (System.currentTimeMillis() - startTime) + "ms.");
+		if (verbose)
+			System.out.println("took " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
 	public void loadEdgeListbyCypherNodesAndRelations(GraphDatabaseService graphDB, File inputFile, char delimiter) {
@@ -711,7 +726,6 @@ public class dataController {
 		System.out.println("========================");
 		long startTimeq2 = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
-
 			// QUERY 2
 			String query2 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MERGE (user2:user {name: line[1]});\n";
 			System.out.print("EXECUTING : \n" + query2);
@@ -740,10 +754,11 @@ public class dataController {
 	 * relation per each line. Hopefully double-nodes will not be created again.
 	 * Uniqueness shall be enforced by Schema-Definition.
 	 * 
-	 * @param graphDB
-	 * @param inputFile
-	 * @param delimiter
-	 * @param limit
+	 * @param graphDB    the graphDB instance to be used
+	 * @param inputFile  path to file
+	 * @param delimiter  separator between nodes in line of file
+	 * @param limit      number of lines to loaded from inputfile
+	 * @param identifier can be one of "cooccs" or "deezer"
 	 */
 	public void loadEdgeListbyMethods(GraphDatabaseService graphDB, File inputFile, char delimiter, int limit, String identifier) {
 		enums.Labels currentLabel = null;
@@ -760,32 +775,34 @@ public class dataController {
 		try {
 			if (limit == 0) {
 				// get all lines of inputfile
-				linecount = getNumberOfLines(inputFile);
+				lineCountLimit = getNumberOfLines(inputFile);
 			} else {
-				linecount = limit;
+				lineCountLimit = limit;
 			}
 
 			// Loading Lines to create nodes
-			System.out.println("LOADING " + linecount + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
+			System.out.println("LOADING " + lineCountLimit + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
 			reader = new BufferedReader(new FileReader(inputFile));
 			int count = 0;
 			System.out.println("ADDING NODES...");
 			long startTime1 = System.currentTimeMillis();
-			try (Transaction tx = graphDB.beginTx()) {
-				String nodeLine = reader.readLine();
-				while (nodeLine != null & count < (linecount - 1)) {
-					String node1 = nodeLine.split(delimiterString)[0];
-					if (!full_node_list.contains(node1)) {
-						full_node_list.add(node1);
-					}
-					String node2 = nodeLine.split(delimiterString)[1];
-					if (!full_node_list.contains(node2)) {
-						full_node_list.add(node2);
-					}
-					nodeLine = reader.readLine();
 
+			String nodeLine = reader.readLine();
+			while (nodeLine != null & count < (lineCountLimit)) {
+				String node1 = nodeLine.split(delimiterString)[0];
+				if (!full_node_list.contains(node1)) {
+					full_node_list.add(node1);
 				}
-				int nodeCount = 0;
+				String node2 = nodeLine.split(delimiterString)[1];
+				if (!full_node_list.contains(node2)) {
+					full_node_list.add(node2);
+				}
+				// go to the next line
+				count++;
+				nodeLine = reader.readLine();
+			}
+			int nodeCount = 0;
+			try (Transaction tx = graphDB.beginTx()) {
 				for (String nodeName : full_node_list) {
 					nodeCount++;
 					addSingleNode(tx, currentLabel, "name", nodeName);
@@ -797,12 +814,12 @@ public class dataController {
 
 			// Loading Lines to create relations
 			reader2 = new BufferedReader(new FileReader(inputFile));
-			int edgeCount = 0;
+			int lineCounter = 0;
 			System.out.println("ADDING EDGES...");
 			long startTime2 = System.currentTimeMillis();
 			try (Transaction tx = graphDB.beginTx()) {
 				String edgeLine = reader2.readLine();
-				while ((edgeLine != null) & edgeCount < (linecount)) {
+				while ((edgeLine != null) & lineCounter < (lineCountLimit)) {
 					String nodeName1 = edgeLine.split(",")[0];
 					String nodeName2 = edgeLine.split(",")[1];
 					Node firstNode = tx.findNode(currentLabel, "name", nodeName1);
@@ -811,24 +828,24 @@ public class dataController {
 					Relationship relationship1 = firstNode.createRelationshipTo(secondNode, currentRelType);
 					@SuppressWarnings("unused")
 					Relationship relationship2 = secondNode.createRelationshipTo(firstNode, currentRelType);
-					edgeCount++;
+					lineCounter++;
 					edgeLine = reader2.readLine();
 				}
 
 				tx.commit();
-				System.out.println("ADDED " + edgeCount + " EDGES BY METHOD. " + (System.currentTimeMillis() - startTime2) + "ms.");
+				System.out.println("ADDED " + lineCounter + " LINES BY METHOD. " + (System.currentTimeMillis() - startTime2) + "ms.");
 			}
-			System.out.println("##### IMPORT VIA METHOD TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
+			System.out.println("# IMPORT VIA METHOD TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 	}
 
-	public void runCooccsImportByMethods(File inputfile) {
-		clearDB(graphDB);
-		clearIndexes(graphDB);
-		createIndexes(graphDB, "cooccs");
+	public void runCooccsImportByMethods(File inputfile, boolean verbose) {
+		clearDB(graphDB, true);
+		clearIndexes(graphDB, true);
+		createIndexes(graphDB, "cooccs", verbose);
 		System.out.println("LOADING BY METHODS");
 		loadEdgeListbyMethods(graphDB, inputfile, ',', 0, "cooccs");
 	}
@@ -838,17 +855,24 @@ public class dataController {
 	 * 
 	 * @param amount
 	 */
-	public void createNodes(int amount) {
-		int counter = 0;
-		long createTime = System.currentTimeMillis();
+	public void createNodes(int amount, Boolean verbose) {
+		long startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
+			long createStart = System.currentTimeMillis();
 			for (int i = 0; i < amount; i++) {
-				Node tmpNode = tx.createNode(enums.Labels.SINGLE_NODE);
-				tmpNode.setProperty("name", i);
+//				Node tmpNode = tx.createNode(enums.Labels.SINGLE_NODE);
+//				tx.createNode();
+				tx.createNode(enums.Labels.SINGLE_NODE);
+//				tmpNode.setProperty("name", i);
 			}
 			tx.commit();
+			long endCreate = System.currentTimeMillis();
+
+			int timeCreate = (int) (endCreate - createStart);
+			System.out.println(amount + "," + (double) (timeCreate / 1000.0) + "," + (double) ((amount * 1000) / timeCreate));
 		}
-		System.out.println("##### NODECREATION OF " + amount + " NODES TOOK: " + (System.currentTimeMillis() - createTime) + "ms.");
+		if (verbose)
+			System.out.println("##### NODECREATION OF " + amount + " NODES TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
 	/**
@@ -861,13 +885,13 @@ public class dataController {
 		int i = 0;
 		int j = 0;
 		long createTime = System.currentTimeMillis();
-	    ArrayList<Node> nodeList = null;
+		ArrayList<Node> nodeList = null;
 		try (Transaction tx = graphDB.beginTx()) {
-			for (Node tmpNode: tx.getAllNodes()) {
+			for (Node tmpNode : tx.getAllNodes()) {
 				nodeList.add(tmpNode);
 			}
-			for (i = 0; i < nodeList.size()-1; i++) {
-				for (j = i + 1; j < nodeList.size()-1; j++) {
+			for (i = 0; i < nodeList.size() - 1; i++) {
+				for (j = i + 1; j < nodeList.size() - 1; j++) {
 					Node node1 = nodeList.get(i);
 					Node node2 = nodeList.get(j);
 					if (!node2.getProperties("name").equals(node1.getProperty("name"))) {
@@ -880,5 +904,13 @@ public class dataController {
 			tx.commit();
 		}
 		System.out.println("##### RELATIONSHIP CREATION OF " + relcounter + " RELATIONS TOOK: " + (System.currentTimeMillis() - createTime) + "ms.");
+	}
+
+	public long getNumberOfNodes(GraphDatabaseService graphDB2) {
+		long nodeCount = 0;
+		try (Transaction tx = graphDB.beginTx()) {
+			nodeCount = tx.getAllNodes().stream().count();
+		}
+		return nodeCount;
 	}
 }

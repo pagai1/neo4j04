@@ -37,8 +37,6 @@ public class PageRankAnalysis {
 
 	public void getPageRank() {
 		try (Transaction tx = graphDB.beginTx()) {
-			
-
 			System.out.println("CREATE TEMPORARY SUBGRAPH...");
 			Result resultCreation = tx.execute("CALL gds.graph.create(" + "  'ACTED_WITH-graph'," + "  'actor',"
 					+ "  'ACTED_WITH'," + "  {" + "    relationshipProperties: 'count'" + "  }) YIELD createMillis;");
