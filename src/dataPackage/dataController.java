@@ -56,14 +56,14 @@ public class dataController {
 	/**
 	 * @param myDeezerDataController
 	 */
-	public void runDeezerImportByCypher(File inputFile_deezer) {
+	public void runDeezerImportByCypher(File inputFile_deezer, int limit) {
 //		clearDB(graphDB);
 //		clearIndexes(graphDB);
 //		createIndexesDeezerDB(graphDB_deezer);
-		createIndexesDeezerDBByCypher(graphDB);
+//		createIndexesDeezerDBByCypher(graphDB);
 		System.out.println("LOADING BY CYPHER");
-		loadEdgeListbyCypher(graphDB, inputFile_deezer, ',');
-		loadEdgeListbyCypherNodesAndRelations(graphDB, inputFile_deezer, ',');
+//		loadEdgeListbyCypher(graphDB, inputFile_deezer, ',');
+//		loadEdgeListbyCypherNodesAndRelations(graphDB, inputFile_deezer, ',');
 		loadEdgeListbyCypherInOne(graphDB, inputFile_deezer, ',');
 
 	}
@@ -690,7 +690,7 @@ public class dataController {
 	 * @param c               - delimiter
 	 */
 	public void loadEdgeListbyCypherInOne(GraphDatabaseService graphDB, File inputFile, char delimiter) {
-		System.out.print("LOADING CSV-FILE...");
+		System.out.print("LOADING FULL CSV-FILE...");
 		long startTimeq1 = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 1
@@ -803,6 +803,7 @@ public class dataController {
 			}
 			int nodeCount = 0;
 			try (Transaction tx = graphDB.beginTx()) {
+				System.out.println("STARTING TRANSACTION...");
 				for (String nodeName : full_node_list) {
 					nodeCount++;
 					addSingleNode(tx, currentLabel, "name", nodeName);

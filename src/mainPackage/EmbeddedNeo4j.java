@@ -6,7 +6,7 @@ import java.lang.System;
 import java.nio.file.*;
 import java.util.Map;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+//import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,24 +30,24 @@ public class EmbeddedNeo4j {
 	 * necessary
 	 */
 
-	private static final String databaseConfig = "/home/pagai/graph-data/general_db_data/conf/neo4j.conf";
+//	private static final String databaseConfig = "/home/pagai/graph-data/general_db_data/conf/neo4j.conf";
 //	private static final File inputFolder = new File("/home/pagai/graph-data/");
 //	private static final File importFolder = new File("/var/lib/neo4j/import/");
 //	private static final File pluginsFolder = new File("/home/pagai/graph-data/general_db_data/plugins");
 
-	private static Boolean cleanAndCreate = true;
+	private static Boolean cleanAndCreate = false;
 
 	// ########################################################
 	// MOVIEDB
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/owndb01/").toPath();
-////	private static final File inputFile = new File("/home/pagai/graph-data/tmdb.csv");
-//	private static final File inputFile = new File("/home/pagai/graph-data/tmdb_fixed.csv");
-//	private static String identifier = "movie";
+	private static final Path databaseDirectory = new File("/home/pagai/graph-data/owndb01/").toPath();
+//	private static final File inputFile = new File("/home/pagai/graph-data/tmdb.csv");
+	private static final File inputFile = new File("/home/pagai/graph-data/tmdb_fixed.csv");
+	private static String identifier = "movie";
 
 	// DEEZERDB
-	private static final Path databaseDirectory = new File("/home/pagai/graph-data/deezerdb/").toPath();
-	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/RO_edges.csv");
-	private static String identifier = "deezer";
+//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/deezerdb/").toPath();
+//	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
+//	private static String identifier = "deezer";
 
 	// COOCCSDB
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
@@ -109,16 +109,13 @@ public class EmbeddedNeo4j {
 //		myDataController.makeCompleteGraph();
 //		myDataController.printAll(graphDB);
 
-//		################ MOVIEDATABASE #################
-//		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).loadPropertiesFromFile(databaseConfig).build();
-//
 
 //		################ COOCCS DATABASE ################
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).build();
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).loadPropertiesFromFile(databaseConfig).build();
 
 //		##################################################
-		for (int krachbumm = 10000; krachbumm < 10100; krachbumm = krachbumm + 1) {
+		for (int krachbumm = 0; krachbumm < 1; krachbumm = krachbumm + 10) {
 			System.out.println("######## STARTING WITH LINES: " + krachbumm);
 			int lineLimit = 0;
 			if (cleanAndCreate) {
@@ -133,8 +130,8 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("deezer")) {
-					myDataController.runDeezerImportByMethods(inputFile, krachbumm);
-//				myDataController.runDeezerImportByCypher(inputFile);
+//				myDataController.runDeezerImportByMethods(inputFile, krachbumm);
+				myDataController.runDeezerImportByCypher(inputFile, krachbumm);
 //		 		myDataController.printAll(graphDB);
 				}
 
@@ -194,14 +191,24 @@ public class EmbeddedNeo4j {
 //				"  'IS_CONNECTED', \n" +  // Relation 
 //				"  {relationshipProperties: 'cost'})\n"	+ 
 //				"YIELD graphName, nodeCount, relationshipCount;\n";
-//		
+//
+		@SuppressWarnings("unused")
+		String createSubGraphMovieDB = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
+				"  'ACTOR', \n" + // Nodelabel
+				"  'ACTED_WITH')"; // Relation
+		
 //		@SuppressWarnings("unused")
-//		String createGraph = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
+//		String createSubGraphTextProcessing = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
 //				"  'SINGLE_NODE', \n" + // Nodelabel
 //				"  'IS_CONNECTED')"; // Relation
-
+		
 //		@SuppressWarnings("unused")
-//		String createGraphALL = "CALL gds.graph.create( 'SUBGRAPH', '*', '*') ";
+//		String createSubGraphDeezer = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
+//				"  'USER', \n" + // Nodelabel
+//				"  'IS_FRIEND_OF')"; // Relation
+		
+		@SuppressWarnings("unused")
+		String createGraphALL = "CALL gds.graph.create( 'SUBGRAPH_ALL', '*', '*') ";
 
 //		@SuppressWarnings("unused")
 //		String createGraphByCypher = "CALL gds.graph.create.cypher('SUBGRAPH','MATCH (n) RETURN id(n) AS id','MATCH (n)-[e]-(m) RETURN id(n) AS source, e.weight AS weight, id(m) AS target, type(e) as type')";
@@ -224,29 +231,31 @@ public class EmbeddedNeo4j {
 //				"ORDER BY score ASC;";				
 //
 		@SuppressWarnings("unused")
-		String pageRank = "CALL gds.pageRank.stream('SUBGRAPH', { maxIterations: 25 })\n" + "YIELD nodeId, score \n"
+		String pageRank = "CALL gds.pageRank.stream('SUBGRAPH', { maxIterations: 100 })\n" + "YIELD nodeId, score \n"
 				+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
-
+		
+		@SuppressWarnings("unused")
+		String pageRankAll = "CALL gds.pageRank.stream('SUBGRAPH_ALL', { maxIterations: 100 })\n" + "YIELD nodeId, score \n"
+				+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
+		
+		@SuppressWarnings("unused")
+		String pageRankWeighted = "CALL gds.pageRank.stream('SUBGRAPH') YIELD nodeId, score AS pageRank\n" + "WITH gds.util.asNode(nodeId) AS n, pageRank\n"
+				+ "MATCH (n)-[i:IS_CONNECTED]-()\n" + "RETURN n.name AS name, pageRank, count(i) AS degree, sum(i.count) AS weightedDegree\n"
+				+ "ORDER BY weightedDegree DESC LIMIT 25";
+		
 		@SuppressWarnings("unused")
 		String hits = "CALL gds.alpha.hits.stream('SUBGRAPH', {hitsIterations: 100}) \n" + "YIELD nodeId,values\n"
 				+ "RETURN gds.util.asNode(nodeId).name AS Name, values.auth AS auth, values.hub as hub \n" + "ORDER BY hub DESC";
-//
-//
 
 		@SuppressWarnings("unused")
 		String betweennessCentrality = "CALL gds.betweenness.stream(\n" + "  graphName: 'SUBGRAPH',\n" + "  configuration: 'SUBGRAPH'\n" + ")\n"
 				+ "YIELD nodeId,score";
 
 		@SuppressWarnings("unused")
-		String pageRank2 = "CALL gds.pageRank.stream('SUBGRAPH') YIELD nodeId, score AS pageRank\n" + "WITH gds.util.asNode(nodeId) AS n, pageRank\n"
-				+ "MATCH (n)-[i:IS_CONNECTED]-()\n" + "RETURN n.name AS name, pageRank, count(i) AS degree, sum(i.count) AS weightedDegree\n"
-				+ "ORDER BY weightedDegree DESC LIMIT 25";
-
-		@SuppressWarnings("unused")
 		String get_herr = "MATCH (n:SINGLE_NODE)-[rel:IS_CONNECTED]->(m:SINGLE_NODE) RETURN m.name, count(n)";
 
 ////		
-//		ExEngine = new ExecutionEngine(graphDB);
+		ExEngine = new ExecutionEngine(graphDB);
 ////		ExEngine.runQuery(createGraphByCypher, true, false);
 //		String returnAllNodes = "MATCH (n) RETURN count(*)";
 //		ExEngine.runQuery(returnAllNodes, true, false);
@@ -256,11 +265,16 @@ public class EmbeddedNeo4j {
 ////		ExEngine.runQuery(call_schema, true, false);
 //
 ////		ExEngine.runQuery(createGraphByCypher, true, false);
-//		ExEngine.runQuery(createGraphALL, true, false);
+//		ExEngine.runQuery(createSubGraphMovieDB, true, false);
+//		ExEngine.runQuery(pageRank, true, false);
+
+
 //
 ////		ExEngine.runQuery(betweenness, true, false);
-//		ExEngine.runQuery(pageRank, true, false);
-//		ExEngine.runQuery(pageRank2, true, false);
+		ExEngine.runQuery(createGraphALL, true, false);
+		ExEngine.runQuery(pageRankAll, true, false);
+		
+//		ExEngine.runQuery(pageRankWeighted, true, false);
 ////		ExEngine.runQuery(get_herr, true, true);
 ////		ExEngine.runQuery(hits, true, false);
 //
@@ -277,7 +291,7 @@ public class EmbeddedNeo4j {
 		System.out.println("SHUTTING DOWN AFTER " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
-	@SuppressWarnings("unused")
+//	@SuppressWarnings("unused")
 	private static void registerShutdownHook(final DatabaseManagementService managementService) {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
