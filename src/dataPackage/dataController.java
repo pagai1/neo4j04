@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 import java.util.Iterator;
 import java.util.List;
-
+import java.util.HashMap;
 import java.lang.System;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -32,12 +32,13 @@ public class dataController {
 	private static BufferedReader reader2;
 
 	public static int lineCountLimit = 0;
-
+	public static HashMap personMap = new HashMap();
 	public static List<String> full_actor_list = new ArrayList<String>();
 	public static List<String> full_director_list = new ArrayList<String>();
 	public static List<String> full_company_list = new ArrayList<String>();
 	public static List<String> full_genre_list = new ArrayList<String>();
 	public static List<String> full_keyword_list = new ArrayList<String>();
+	public static List<String> full_person_list = new ArrayList<String>();
 
 	public static List<String> full_node_list = new ArrayList<String>();
 
@@ -126,9 +127,11 @@ public class dataController {
 			if (clearGraph) {
 				clearDB(graphDB, true);
 			}
-			readFile(graphDB, reader, headers, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list);
+			readFile(graphDB, reader, headers, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list,
+					full_person_list);
 
-			readFile2(graphDB, reader2, headers2, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list);
+			readFile2(graphDB, reader2, headers2, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list,
+					full_person_list);
 			System.out.println("READ " + lineCountLimit + " ENTRIES IN " + (System.currentTimeMillis() - startTime) + " ms.");
 //			printAll(graphDB);
 
@@ -199,9 +202,10 @@ public class dataController {
 	 * @throws IOException
 	 */
 	private void readFile(GraphDatabaseService inputgraphDb, BufferedReader reader, String[] headers, List<String> full_actor_list,
-			List<String> full_director_list, List<String> full_company_list, List<String> full_genre_list, List<String> full_keyword_list)
-			throws IOException {
+			List<String> full_director_list, List<String> full_company_list, List<String> full_genre_list, List<String> full_keyword_list,
+			List<String> full_person_list) throws IOException {
 		String[] movieline = headers;
+		List<String> roleList = new ArrayList<>();
 
 		int count = 0;
 		try (Transaction tx = graphDB.beginTx()) {
@@ -215,8 +219,9 @@ public class dataController {
 					}
 					if (headers[i].equals("cast")) {
 						for (String actor : movieline[i].split("\\|")) {
-							if (!full_actor_list.contains(actor)) {
+							if (!full_person_list.contains(actor)) {
 								full_actor_list.add(actor);
+								full_person_list.add(actor);
 //								System.out.println("ADDED ACTOR: " + actor);
 							}
 //							if (!checkIfExists("name", actor, enums.Labels.ACTOR)) {
@@ -230,8 +235,9 @@ public class dataController {
 					}
 					if (headers[i].equals("director")) {
 						for (String director : movieline[i].split("\\|")) {
-							if (!full_director_list.contains(director)) {
+							if (!full_person_list.contains(director)) {
 								full_director_list.add(director);
+								full_person_list.add(director);
 							}
 //							if (!checkIfExists("name", director, enums.Labels.DIRECTOR)) {
 //								if (!full_director_list.contains(director.toString())) {
@@ -269,37 +275,52 @@ public class dataController {
 					}
 				}
 			}
-			for (String value : full_actor_list) {
-				if (!checkIfExists("name", value, enums.Labels.ACTOR)) {
-					addSingleNode(tx, enums.Labels.ACTOR, "name", value);
+			roleList.clear();
+			for (String value : full_person_list) {
+				if (full_actor_list.contains(value)) {
+					personMap.put("ACTOR", true);
+				}
+				if (full_director_list.contains(value)) {
+					personMap.put("DIRECTOR", true);
+				}
+//				personMap.put("roles", roleList);
+				if (!checkIfExists("name", value, enums.Labels.PERSON)) {
+					addSingleNode(tx, enums.Labels.PERSON, "name", value, personMap);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
 			}
-			for (String value : full_director_list) {
-				if (!checkIfExists("name", value, enums.Labels.DIRECTOR)) {
-					addSingleNode(tx, enums.Labels.DIRECTOR, "name", value);
-				} else {
-					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
-				}
-			}
+//			for (String value : full_actor_list) {
+//				if (!checkIfExists("name", value, enums.Labels.ACTOR)) {
+//					addSingleNode(tx, enums.Labels.ACTOR, "name", value);
+//				} else {
+//					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
+//				}
+//			}
+//			for (String value : full_director_list) {
+//				if (!checkIfExists("name", value, enums.Labels.DIRECTOR)) {
+//					addSingleNode(tx, enums.Labels.DIRECTOR, "name", value);
+//				} else {
+//					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
+//				}
+//			}
 			for (String value : full_company_list) {
 				if (!checkIfExists("name", value, enums.Labels.PRODUCTION_COMPANY)) {
-					addSingleNode(tx, enums.Labels.PRODUCTION_COMPANY, "name", value);
+					addSingleNode(tx, enums.Labels.PRODUCTION_COMPANY, "name", value, null);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
 			}
 			for (String value : full_keyword_list) {
 				if (!checkIfExists("name", value, enums.Labels.KEYWORD)) {
-					addSingleNode(tx, enums.Labels.KEYWORD, "name", value);
+					addSingleNode(tx, enums.Labels.KEYWORD, "name", value, null);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
 			}
 			for (String value : full_genre_list) {
 				if (!checkIfExists("name", value, enums.Labels.GENRE)) {
-					addSingleNode(tx, enums.Labels.GENRE, "name", value);
+					addSingleNode(tx, enums.Labels.GENRE, "name", value, null);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
@@ -323,7 +344,7 @@ public class dataController {
 	 * @throws IOException
 	 */
 	private void readFile2(GraphDatabaseService inputgraphDb, BufferedReader reader, String[] headers, List<String> full_actor_list,
-			List<String> full_director_list, List<String> full_company_list, List<String> full_genre_list, List<String> full_keyword_list)
+			List<String> full_director_list, List<String> full_company_list, List<String> full_genre_list, List<String> full_keyword_list, List<String> full_person_list)
 			throws IOException {
 		String[] movieline = headers;
 		int count2 = 0;
@@ -337,24 +358,30 @@ public class dataController {
 				for (int i = 0; i < headers.length; i++) {
 					if (headers[i].equals("original_title")) {
 						movieNode.setProperty("name", movieline[i]);
+						movieNode.setProperty("original_title", movieline[i]);
 					}
-				}
-				for (int i = 0; i < headers.length; i++) {
+
+
+//				}
+//				for (int i = 0; i < headers.length; i++) 
+//					{
 					if (movieline[i].equals(" ")) {
 						movieNode.setProperty(headers[i], "unknown");
 					} else {
 						movieNode.setProperty(headers[i], movieline[i]);
 						if (headers[i].equals("cast")) {
 							for (String actor : movieline[i].split("\\|")) {
+								Relationship relationshipMovie = (tx.findNode(enums.Labels.PERSON, "name", actor)).createRelationshipTo(movieNode,
+										enums.RelationshipTypes.ACTED_IN);
 								for (String actor2 : movieline[i].split("\\|")) {
 									if (!actor.equals(actor2)) {
 //										System.out.println("ADDING RELATION BETWEEN: " + actor + " AND " + actor2);
-										Relationship relationship = (tx.findNode(enums.Labels.ACTOR, "name", actor)).createRelationshipTo(
-												tx.findNode(enums.Labels.ACTOR, "name", actor2), enums.RelationshipTypes.ACTED_WITH);
+										Relationship relationship = (tx.findNode(enums.Labels.PERSON, "name", actor)).createRelationshipTo(
+												tx.findNode(enums.Labels.PERSON, "name", actor2), enums.RelationshipTypes.ACTED_WITH);
 										relationship.setProperty("count", 1);
-										Relationship relationship2 = (tx.findNode(enums.Labels.ACTOR, "name", actor2)).createRelationshipTo(
-												tx.findNode(enums.Labels.ACTOR, "name", actor), enums.RelationshipTypes.ACTED_WITH);
-										relationship2.setProperty("count", 1);
+//										Relationship relationship2 = (tx.findNode(enums.Labels.ACTOR, "name", actor2)).createRelationshipTo(
+//												tx.findNode(enums.Labels.ACTOR, "name", actor), enums.RelationshipTypes.ACTED_WITH);
+//										relationship2.setProperty("count", 1);
 									}
 								}
 							}
@@ -362,7 +389,7 @@ public class dataController {
 						if (headers[i].equals("director")) {
 							for (String director : movieline[i].split("\\|")) {
 //								System.out.println("DIRECTOR: " + director);
-								Relationship relationship3 = (tx.findNode(enums.Labels.DIRECTOR, "name", director)).createRelationshipTo(movieNode,
+								Relationship relationship3 = (tx.findNode(enums.Labels.PERSON, "name", director)).createRelationshipTo(movieNode,
 										enums.RelationshipTypes.DIRECTED);
 								relationship3.setProperty("count", 1);
 							}
@@ -408,25 +435,32 @@ public class dataController {
 	 * @param label
 	 * @param nodeName
 	 */
-	private void addSingleNode(Transaction tx2, enums.Labels label, String property, String nodeName) {
+	private void addSingleNode(Transaction tx2, enums.Labels label, String nameProperty, String nodeName, HashMap properties) {
 //		System.out.println("ADDING " + label.toString() + " " + nodeName);
 		Node node = tx2.createNode(label);
-		node.setProperty(property, nodeName);
+		node.setProperty(nameProperty, nodeName);
+		if (properties != null) {
+			Iterator propertyIterator = properties.entrySet().iterator();
+			while (propertyIterator.hasNext()) {
+				HashMap.Entry propertyEntry = (HashMap.Entry) propertyIterator.next();
+				node.setProperty((String) propertyEntry.getKey(), propertyEntry.getValue());
+			}
+		}
 	}
 
-//	/**
-//	 * Adds a property to a node. Not yet used.
-//	 * 
-//	 * @param tx2
-//	 * @param label
-//	 * @param nodeName
-//	 * @param propertyName
-//	 * @param propertyValue
-//	 */
-//	private void addPropertyToNode(Transaction tx2, enums.Labels label, String nodeName, String propertyName, String propertyValue) {
-//		Node node = tx2.findNode(label, propertyName, propertyValue);
-//		node.setProperty("name", nodeName);
-//	}
+	/**
+	 * Adds a property to a node. Not yet used.
+	 * 
+	 * @param tx2
+	 * @param label
+	 * @param nodeName
+	 * @param propertyName
+	 * @param propertyValue
+	 */
+	private void addPropertyToNode(Transaction tx2, enums.Labels label, String nodeName, String propertyName, String propertyValue) {
+		Node node = tx2.findNode(label, propertyName, propertyValue);
+		node.setProperty("name", nodeName);
+	}
 
 	/**
 	 * Can be used to check if a node is already existing in graph
@@ -524,12 +558,14 @@ public class dataController {
 		IndexDefinition userIndex;
 		startTime = System.currentTimeMillis();
 		IndexDefinition wordNamesIndex;
-		if (verbose) System.out.println("CREATING INDEX FOR SINGLE_NODE NAME");
+		if (verbose)
+			System.out.println("CREATING INDEX FOR SINGLE_NODE NAME");
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
 			wordNamesIndex = schema.indexFor(Labels.SINGLE_NODE).on("name").withName("wordnames").create();
 			tx.commit();
-			if (verbose) System.out.println("CREATED INDEX ON WORDS IN " + (System.currentTimeMillis() - startTime) + "ms");
+			if (verbose)
+				System.out.println("CREATED INDEX ON WORDS IN " + (System.currentTimeMillis() - startTime) + "ms");
 		} catch (Exception e) {
 			System.out.println("There was already an index.");
 		}
@@ -557,7 +593,8 @@ public class dataController {
 			Schema schema = tx.schema();
 			userIndex = schema.indexFor(Labels.USER).on("name").withName("usernames").create();
 			tx.commit();
-			if (verbose) System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
+			if (verbose)
+				System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
 		} catch (Exception e) {
 			System.out.println("There was already an index.");
 		}
@@ -585,9 +622,9 @@ public class dataController {
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
-			actorNamesIndex = schema.indexFor(Labels.ACTOR).on("name").withName("actornames").create();
+			actorNamesIndex = schema.indexFor(Labels.PERSON).on("name").withName("personnames").create();
 			tx.commit();
-			System.out.println("CREATED INDEX ON ACTORS IN " + (System.currentTimeMillis() - startTime) + "ms");
+			System.out.println("CREATED INDEX ON PERSONS IN " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
@@ -611,14 +648,14 @@ public class dataController {
 			tx.close();
 			System.out.println("CREATED INDEX ON GENRES IN " + (System.currentTimeMillis() - startTime) + "ms");
 		}
-		startTime = System.currentTimeMillis();
-		try (Transaction tx = graphDB.beginTx()) {
-			Schema schema = tx.schema();
-			directorIndex = schema.indexFor(Labels.DIRECTOR).on("name").withName("directornames").create();
-			tx.commit();
-			tx.close();
-			System.out.println("CREATED INDEX ON DIRECTORS IN " + (System.currentTimeMillis() - startTime) + "ms");
-		}
+//		startTime = System.currentTimeMillis();
+//		try (Transaction tx = graphDB.beginTx()) {
+//			Schema schema = tx.schema();
+//			directorIndex = schema.indexFor(Labels.DIRECTOR).on("name").withName("directornames").create();
+//			tx.commit();
+//			tx.close();
+//			System.out.println("CREATED INDEX ON DIRECTORS IN " + (System.currentTimeMillis() - startTime) + "ms");
+//		}
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
@@ -806,7 +843,7 @@ public class dataController {
 				System.out.println("STARTING TRANSACTION...");
 				for (String nodeName : full_node_list) {
 					nodeCount++;
-					addSingleNode(tx, currentLabel, "name", nodeName);
+					addSingleNode(tx, currentLabel, "name", nodeName, null);
 				}
 
 				tx.commit();

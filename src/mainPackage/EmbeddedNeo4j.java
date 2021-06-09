@@ -35,7 +35,7 @@ public class EmbeddedNeo4j {
 //	private static final File importFolder = new File("/var/lib/neo4j/import/");
 //	private static final File pluginsFolder = new File("/home/pagai/graph-data/general_db_data/plugins");
 
-	private static Boolean cleanAndCreate = false;
+	private static Boolean cleanAndCreate = true;
 
 	// ########################################################
 	// MOVIEDB
@@ -271,8 +271,8 @@ public class EmbeddedNeo4j {
 
 //
 ////		ExEngine.runQuery(betweenness, true, false);
-		ExEngine.runQuery(createGraphALL, true, false);
-		ExEngine.runQuery(pageRankAll, true, false);
+//		ExEngine.runQuery(createGraphALL, true, false);
+//		ExEngine.runQuery(pageRankAll, true, false);
 		
 //		ExEngine.runQuery(pageRankWeighted, true, false);
 ////		ExEngine.runQuery(get_herr, true, true);
