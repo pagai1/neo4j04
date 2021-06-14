@@ -30,7 +30,7 @@ public class ExecutionEngine {
 	 * @param verbose - print result of query
 	 * @param extraLinebreak - Output-lines receive an extra linebreak, sometimes good for better output.
 	 */
-	public void runQuery(String query, Boolean verbose, Boolean extraLinebreak) {
+	public void runQuery(String query, Boolean verbose, Boolean extraLinebreak, String extraField) {
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 1
 			long startTimeQuery = System.currentTimeMillis();
@@ -41,7 +41,7 @@ public class ExecutionEngine {
 //			tx.close();
 //			System.out.println("CLOSE TOOK: " + (System.currentTimeMillis() - startTimeClose) + "ms.");
 			if (verbose) {
-				printResult(result, extraLinebreak);
+				printResult(result, extraLinebreak, extraField);
 			}
 			System.out.println("QUERY FINISHED.");
 		}
@@ -54,17 +54,17 @@ public class ExecutionEngine {
 	 * @param verbose - Print out result or not.
 	 * @param extraLinebreak - is there an additional linebreak necessary for the output? Helpful for multiline-results.
 	 */
-	public void exportDBtoFile(String outputFile, Boolean verbose, Boolean extraLinebreak) {
+	public void exportDBtoFile(String outputFile, Boolean verbose, Boolean extraLinebreak, String extraField) {
 		String query = "CALL apoc.export.csv.all(\"" + outputFile + "\", {})";
-		this.runQuery(query, verbose, extraLinebreak);
+		this.runQuery(query, verbose, extraLinebreak, extraField);
 	}
 
 	/**
 	 * Prints out the result.
 	 * @param result
 	 */
-	private void printResult(Result result, Boolean extraLinebreak) {
-		String eLb = " ";
+	private void printResult(Result result, Boolean extraLinebreak, String extraField) {
+		String eLb = extraField;
 		if (extraLinebreak) {
 			eLb = "\n";
 		}
@@ -100,7 +100,7 @@ public class ExecutionEngine {
 				"    totalCost,\n" + 
 				"    [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodeNames\n"+
 				"	 ORDER BY index";
-		this.runQuery(query, verbose, true);
+		this.runQuery(query, verbose, true, "");
 	}
 
 }

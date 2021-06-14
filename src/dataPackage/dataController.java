@@ -219,11 +219,14 @@ public class dataController {
 					}
 					if (headers[i].equals("cast")) {
 						for (String actor : movieline[i].split("\\|")) {
-							if (!full_person_list.contains(actor)) {
+							if (!full_actor_list.contains(actor)) {
 								full_actor_list.add(actor);
-								full_person_list.add(actor);
 //								System.out.println("ADDED ACTOR: " + actor);
 							}
+							if (!full_person_list.contains(actor)) {
+								full_person_list.add(actor);
+							}
+
 //							if (!checkIfExists("name", actor, enums.Labels.ACTOR)) {
 //								if (!full_actor_list.contains(actor.toString()) == false ) {
 //									full_actor_list.add(actor);
@@ -235,10 +238,13 @@ public class dataController {
 					}
 					if (headers[i].equals("director")) {
 						for (String director : movieline[i].split("\\|")) {
-							if (!full_person_list.contains(director)) {
+							if (!full_director_list.contains(director)) {
 								full_director_list.add(director);
+							}
+							if (!full_person_list.contains(director)) {
 								full_person_list.add(director);
 							}
+
 //							if (!checkIfExists("name", director, enums.Labels.DIRECTOR)) {
 //								if (!full_director_list.contains(director.toString())) {
 //									full_director_list.add(director);
@@ -277,12 +283,15 @@ public class dataController {
 			}
 			roleList.clear();
 			for (String value : full_person_list) {
+				personMap.put("ACTOR", false);
+				personMap.put("DIRECTOR", false);
 				if (full_actor_list.contains(value)) {
 					personMap.put("ACTOR", true);
 				}
 				if (full_director_list.contains(value)) {
 					personMap.put("DIRECTOR", true);
 				}
+//				System.out.println(personMap);
 //				personMap.put("roles", roleList);
 				if (!checkIfExists("name", value, enums.Labels.PERSON)) {
 					addSingleNode(tx, enums.Labels.PERSON, "name", value, personMap);
@@ -344,8 +353,8 @@ public class dataController {
 	 * @throws IOException
 	 */
 	private void readFile2(GraphDatabaseService inputgraphDb, BufferedReader reader, String[] headers, List<String> full_actor_list,
-			List<String> full_director_list, List<String> full_company_list, List<String> full_genre_list, List<String> full_keyword_list, List<String> full_person_list)
-			throws IOException {
+			List<String> full_director_list, List<String> full_company_list, List<String> full_genre_list, List<String> full_keyword_list,
+			List<String> full_person_list) throws IOException {
 		String[] movieline = headers;
 		int count2 = 0;
 
@@ -360,7 +369,6 @@ public class dataController {
 						movieNode.setProperty("name", movieline[i]);
 						movieNode.setProperty("original_title", movieline[i]);
 					}
-
 
 //				}
 //				for (int i = 0; i < headers.length; i++) 
@@ -836,6 +844,7 @@ public class dataController {
 				}
 				// go to the next line
 				count++;
+				System.out.print("LOADED : " + count + " LINES OF FILE.\r");
 				nodeLine = reader.readLine();
 			}
 			int nodeCount = 0;
@@ -844,6 +853,7 @@ public class dataController {
 				for (String nodeName : full_node_list) {
 					nodeCount++;
 					addSingleNode(tx, currentLabel, "name", nodeName, null);
+					System.out.print("ADDED : " + count + " NODES.\r");
 				}
 
 				tx.commit();

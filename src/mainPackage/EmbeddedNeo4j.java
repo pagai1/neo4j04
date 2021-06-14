@@ -126,12 +126,12 @@ public class EmbeddedNeo4j {
 				long startTime2 = System.currentTimeMillis();
 
 				if (identifier.equals("movie")) {
-					myDataController.loadDataFromCSVFile(inputFile, ",", graphDB, false, 0);
+					myDataController.loadDataFromCSVFile(inputFile, ",", graphDB, false, 11);
 				}
 
 				if (identifier.equals("deezer")) {
-//				myDataController.runDeezerImportByMethods(inputFile, krachbumm);
-				myDataController.runDeezerImportByCypher(inputFile, krachbumm);
+				myDataController.runDeezerImportByMethods(inputFile, krachbumm);
+//				myDataController.runDeezerImportByCypher(inputFile, krachbumm);
 //		 		myDataController.printAll(graphDB);
 				}
 
@@ -193,8 +193,8 @@ public class EmbeddedNeo4j {
 //				"YIELD graphName, nodeCount, relationshipCount;\n";
 //
 		@SuppressWarnings("unused")
-		String createSubGraphMovieDB = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
-				"  'ACTOR', \n" + // Nodelabel
+		String createSubGraphMovieDB = "CALL gds.graph.create( 'SUBGRAPH', \n" + // temporary graph name
+				"  'PERSON', \n" + // Nodelabel
 				"  'ACTED_WITH')"; // Relation
 		
 //		@SuppressWarnings("unused")
@@ -209,16 +209,16 @@ public class EmbeddedNeo4j {
 		
 		@SuppressWarnings("unused")
 		String createGraphALL = "CALL gds.graph.create( 'SUBGRAPH_ALL', '*', '*') ";
-
+//
 //		@SuppressWarnings("unused")
 //		String createGraphByCypher = "CALL gds.graph.create.cypher('SUBGRAPH','MATCH (n) RETURN id(n) AS id','MATCH (n)-[e]-(m) RETURN id(n) AS source, e.weight AS weight, id(m) AS target, type(e) as type')";
 //				
 
-		// @SuppressWarnings("unused")
-//		String createGraphByCypher = "CALL gds.graph.create.cypher( " +
-//				"  'SUBGRAPH', \n"+ // temporary graph name
-//				"  'MATCH (n) RETURN id(n) AS id', \n" +  // Nodelabel
-//				"  'MATCH (n)-[r]->(m) RETURN id(n) AS source, id(m) AS target, type(r) as type')";  // Relation 
+		 @SuppressWarnings("unused")
+		String createGraphByCypher = "CALL gds.graph.create.cypher( " +
+				"  'SUBGRAPH', \n"+ // temporary graph name
+				"  'MATCH (n) RETURN id(n) AS id', \n" +  // Nodelabel
+				"  'MATCH (n)-[r]->(m) RETURN id(n) AS source, id(m) AS target, type(r) as type')";  // Relation 
 
 //		@SuppressWarnings("unused")
 //		String betweenness = "CALL gds.betweenness.stream(\n" + 
@@ -230,6 +230,12 @@ public class EmbeddedNeo4j {
 //				"RETURN gds.util.asNode(nodeId).name AS Name, score\n"+
 //				"ORDER BY score ASC;";				
 //
+		@SuppressWarnings("unused")
+		String simRank = "CALL gds.nodeSimilarity.stream('SUBGRAPH_ALL') "
+				+ "YIELD node1, node2, similarity \n"
+				+ "RETURN gds.util.asNode(node1).name AS n1, gds.util.asNode(node2).name as n2, similarity \n"
+				+ "ORDER BY similarity DESCENDING, n1, n2";
+		 
 		@SuppressWarnings("unused")
 		String pageRank = "CALL gds.pageRank.stream('SUBGRAPH', { maxIterations: 100 })\n" + "YIELD nodeId, score \n"
 				+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
@@ -264,9 +270,10 @@ public class EmbeddedNeo4j {
 //
 ////		ExEngine.runQuery(call_schema, true, false);
 //
-////		ExEngine.runQuery(createGraphByCypher, true, false);
-//		ExEngine.runQuery(createSubGraphMovieDB, true, false);
-//		ExEngine.runQuery(pageRank, true, false);
+//		ExEngine.runQuery(createGraphByCypher, true, true);
+//		ExEngine.runQuery(createSubGraphMovieDB, true, true);
+		ExEngine.runQuery(createGraphALL, true ,false, "");
+//		ExEngine.runQuery(pageRank, true, true);
 
 
 //
@@ -277,7 +284,7 @@ public class EmbeddedNeo4j {
 //		ExEngine.runQuery(pageRankWeighted, true, false);
 ////		ExEngine.runQuery(get_herr, true, true);
 ////		ExEngine.runQuery(hits, true, false);
-//
+		ExEngine.runQuery(simRank, true, false, "|");
 //		ExEngine.exportDBtoFile(outputFile, true, false);
 //
 ////		String endNode = "bums";
