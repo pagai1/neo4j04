@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.lang.System;
 
@@ -54,18 +55,22 @@ public class dataController {
 		graphDB = inputgraphDb;
 	}
 
+	
 	/**
-	 * @param myDeezerDataController
+	 * Loads the file via the uncommented method
+	 * @param inputFile (inputfile
+	 * @param limit - max number of edges to be loaded (0=all)
+	 * @param weighted - is it weighted or not
 	 */
-	public void runDeezerImportByCypher(File inputFile_deezer, int limit) {
+	public void runDeezerImportByCypher(File inputFile, int limit, boolean weighted, boolean directed) {
 //		clearDB(graphDB);
-//		clearIndexes(graphDB);
-//		createIndexesDeezerDB(graphDB_deezer);
+		clearIndexes(graphDB, true);
+		createIndexesDeezerDB(graphDB, true);
 //		createIndexesDeezerDBByCypher(graphDB);
-		System.out.println("LOADING BY CYPHER");
-//		loadEdgeListbyCypher(graphDB, inputFile_deezer, ',');
-//		loadEdgeListbyCypherNodesAndRelations(graphDB, inputFile_deezer, ',');
-		loadEdgeListbyCypherInOne(graphDB, inputFile_deezer, ',');
+		System.out.println("LOADING BY " + limit + " LINES BY CYPHER");
+//		loadEdgeListbyCypher(graphDB, inputFile_deezer, ',', weighted);
+//		loadEdgeListbyCypherNodesAndRelations(graphDB, inputFile_deezer, ',', weighted);
+		loadEdgeListbyCypherInOne(graphDB, inputFile, ',', limit, weighted, directed);
 
 	}
 
@@ -74,10 +79,11 @@ public class dataController {
 	 * 
 	 * @param inputFile_deezer path to file
 	 * @param limit            number of lines to be loaded from inputfile
+	 * @param weighted		   if yes, third row of csv will be taken as weight-value
 	 */
-	public void runDeezerImportByMethods(File inputFile, int limit) {
-		System.out.println("LOADING DEEZER EDGELIST BY METHODS");
-		loadEdgeListbyMethods(graphDB, inputFile, ',', limit, "deezer");
+	public void runDeezerImportByMethods(File inputFile, int limit, boolean weighted, boolean directed) {
+		System.out.println("LOADING EDGELIST BY METHODS");
+		loadEdgeListbyMethods(graphDB, inputFile, ',', limit, "deezer", weighted, directed);
 	}
 
 	public int getNumberOfLines(File inputFile) throws IOException {
@@ -513,7 +519,7 @@ public class dataController {
 			while (edgeIterator.hasNext()) {
 				Relationship edgeFromList = edgeIterator.next();
 				System.out.println(
-						"EDGE ## FROM: " + edgeFromList.getStartNode().getProperty("name") + " TO: " + edgeFromList.getEndNode().getProperty("name"));
+						"EDGE ## FROM: " + edgeFromList.getStartNode().getProperty("name") + " TO: " + edgeFromList.getEndNode().getProperty("name") + " WITH WEIGHT: " + edgeFromList.getProperty("weight"));
 				edgeCount++;
 			}
 			System.out.println("NODECOUNT: " + nodeCount);
@@ -568,6 +574,7 @@ public class dataController {
 		IndexDefinition wordNamesIndex;
 		if (verbose)
 			System.out.println("CREATING INDEX FOR SINGLE_NODE NAME");
+		
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
 			wordNamesIndex = schema.indexFor(Labels.SINGLE_NODE).on("name").withName("wordnames").create();
@@ -699,13 +706,19 @@ public class dataController {
 			System.out.println("took " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
-	public void loadEdgeListbyCypherNodesAndRelations(GraphDatabaseService graphDB, File inputFile, char delimiter) {
+	public void loadEdgeListbyCypherNodesAndRelations(GraphDatabaseService graphDB, File inputFile, char delimiter, boolean weighted) {
+		String weightString = "";
+		if (weighted) {
+			weightString = " {weight: line[2]}";
+		}
 		System.out.print("LOADING CSV-FILE...");
 		long startTimeq1 = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 1
-			String query1 = "LOAD CSV FROM 'file://" + inputFile + "' AS line \n" + "MERGE (user1:user {name: line[0]}) \n"
-					+ "MERGE (user2:user {name: line[1]})";
+			String query1 = "LOAD CSV FROM 'file://" 
+					+ inputFile + "' AS line \n" 
+					+ "MERGE (user1:USER {name: line[0]}) \n"
+					+ "MERGE (user2:USER {name: line[1]})";
 			System.out.print("EXECUTING : \n" + query1);
 			tx.execute(query1);
 
@@ -717,8 +730,13 @@ public class dataController {
 		long startTimeq3 = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 3
-			String query3 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MATCH (u1:user {name: line[0]})\n"
-					+ "MATCH (u2:user {name: line[1]})\n" + "MERGE (u1)-[:IS_FRIEND_OF]->(u2)\n" + "MERGE (u2)-[:IS_FRIEND_OF]->(u1)\n";
+			String query3 = "LOAD CSV FROM 'file://" 
+					+ inputFile 
+					+ "' AS line\n" 
+					+ "MATCH (u1:USER {name: line[0]})\n"
+					+ "MATCH (u2:USER {name: line[1]})\n" 
+					+ "MERGE (u1)-[:IS_FRIEND_OF"+ weightString + "]->(u2)\n" 
+					+ "MERGE (u2)-[:IS_FRIEND_OF"+ weightString + "]->(u1)\n";
 			System.out.println("EXECUTING : \n" + query3);
 			tx.execute(query3);
 			tx.commit();
@@ -731,17 +749,35 @@ public class dataController {
 	/**
 	 * Loads csv-edgelist to database.
 	 * 
-	 * @param inputfileDeezer - the input file to be loaded
-	 * @param c               - delimiter
+	 * @param inputFile - the input file to be loaded
+	 * @param delimiter - delimiter
+ 	 * @param weighted	- load third column for weight-value of edge
+ 	 * @param graphDB	- the DB instance
+ 	 * @param limit		- number of lines to be loaded from given file (0 = all)
+ 	 * @param directed  - if the edgelist contains both connections of nodes, then it is directed, otherwise undirected, then the second connection has to be added. weight will be the same for both ways. 
+
 	 */
-	public void loadEdgeListbyCypherInOne(GraphDatabaseService graphDB, File inputFile, char delimiter) {
+	public void loadEdgeListbyCypherInOne(GraphDatabaseService graphDB, File inputFile, char delimiter, int limit, boolean weighted, boolean directed) {
+		String weightString = "";
+		String rowlimitation = "";
+		if (limit != 0 ) {
+			rowlimitation = "WITH line LIMIT " + limit + "\n";
+		}
+		if (weighted) {
+			weightString = " {weight: toInteger(line[2])}";
+		}
 		System.out.print("LOADING FULL CSV-FILE...");
 		long startTimeq1 = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
-			// QUERY 1
-			String query1 = "LOAD CSV FROM 'file://" + inputFile + "' AS line \n" + "MERGE (user1:user {name: line[0]}) \n"
-					+ "MERGE (user2:user {name: line[1]}) \n" + "MERGE (user1)-[:IS_FRIEND_OF]->(user2) \n"
-					+ "MERGE (user2)-[:IS_FRIEND_OF]->(user1) ";
+			// QUERY
+			String query1 = "LOAD CSV FROM 'file://" + inputFile + "' AS line \n" 
+					+ rowlimitation
+					+ "MERGE (user1:USER {name: line[0]}) \n"
+					+ "MERGE (user2:USER {name: line[1]}) \n" 
+					+ "MERGE (user1)-[:IS_FRIEND_OF"+weightString+"]->(user2) \n";
+			if (!directed) {
+				query1 = query1.concat("MERGE (user2)-[:IS_FRIEND_OF"+weightString+"]->(user2) \n");
+			}
 			System.out.print("EXECUTING : \n" + query1);
 			tx.execute(query1);
 			tx.commit();
@@ -757,12 +793,12 @@ public class dataController {
 	 * @param inputfileDeezer - the input file to be loaded
 	 * @param c               - delimiter
 	 */
-	public void loadEdgeListbyCypher(GraphDatabaseService graphDB, File inputFile, char delimiter) {
+	public void loadEdgeListbyCypher(GraphDatabaseService graphDB, File inputFile, char delimiter, boolean weighted) {
 		System.out.print("LOADING CSV-FILE...");
 		long startTimeq1 = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 1
-			String query1 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MERGE (user1:user {name: line[0]});\n";
+			String query1 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MERGE (user1:USER {name: line[0]});\n";
 			System.out.print("EXECUTING : \n" + query1);
 			tx.execute(query1);
 			tx.commit();
@@ -772,7 +808,7 @@ public class dataController {
 		long startTimeq2 = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 2
-			String query2 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MERGE (user2:user {name: line[1]});\n";
+			String query2 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MERGE (user2:USER {name: line[1]});\n";
 			System.out.print("EXECUTING : \n" + query2);
 			tx.execute(query2);
 			tx.commit();
@@ -781,10 +817,14 @@ public class dataController {
 		System.out.println("========================");
 
 		long startTimeq3 = System.currentTimeMillis();
+		String weightString = ""; 
+		if (weighted) {
+			weightString = " {weight: line[2]}";
+		}
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 3
-			String query3 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MATCH (u1:user {name: line[0]})\n"
-					+ "MATCH (u2:user {name: line[1]})\n" + "MERGE (u1)-[:IS_FRIEND_OF]->(u2)\n" + "MERGE (u2)-[:IS_FRIEND_OF]->(u1)\n";
+			String query3 = "LOAD CSV FROM 'file://" + inputFile + "' AS line\n" + "MATCH (u1:USER {name: line[0]})\n"
+					+ "MATCH (u2:USER {name: line[1]})\n" + "MERGE (u1)-[:IS_FRIEND_OF" + weightString + "]->(u2)\n" + "MERGE (u2)-[:IS_FRIEND_OF]->(u1)\n";
 			System.out.print("EXECUTING : \n" + query3);
 			tx.execute(query3);
 			tx.commit();
@@ -804,8 +844,10 @@ public class dataController {
 	 * @param delimiter  separator between nodes in line of file
 	 * @param limit      number of lines to loaded from inputfile
 	 * @param identifier can be one of "cooccs" or "deezer"
+	 * @param weighted	 load third column for weight-value of edge
+	 * @param directed   if false (undirected) graph, 2 relations will be created for each line
 	 */
-	public void loadEdgeListbyMethods(GraphDatabaseService graphDB, File inputFile, char delimiter, int limit, String identifier) {
+	public void loadEdgeListbyMethods(GraphDatabaseService graphDB, File inputFile, char delimiter, int limit, String identifier, boolean weighted, boolean directed) {
 		enums.Labels currentLabel = null;
 		enums.RelationshipTypes currentRelType = null;
 		if (identifier.equals("cooccs")) {
@@ -829,31 +871,30 @@ public class dataController {
 			System.out.println("LOADING " + lineCountLimit + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
 			reader = new BufferedReader(new FileReader(inputFile));
 			int count = 0;
-			System.out.println("ADDING NODES...");
+			System.out.println("COLLECTING NODES...");
 			long startTime1 = System.currentTimeMillis();
 
 			String nodeLine = reader.readLine();
 			while (nodeLine != null & count < (lineCountLimit)) {
 				String node1 = nodeLine.split(delimiterString)[0];
-				if (!full_node_list.contains(node1)) {
-					full_node_list.add(node1);
-				}
+				full_node_list.add(node1);
 				String node2 = nodeLine.split(delimiterString)[1];
-				if (!full_node_list.contains(node2)) {
-					full_node_list.add(node2);
-				}
+				full_node_list.add(node2);
 				// go to the next line
 				count++;
-				System.out.print("LOADED : " + count + " LINES OF FILE.\r");
+//				System.out.print("LOADED : " + count + " LINES OF FILE.\r");
 				nodeLine = reader.readLine();
 			}
+//			System.out.println("FULL LIST: " + full_node_list.size());
+			List<String> full_node_list_unique = full_node_list.stream().distinct().collect(Collectors.toList());
+//			System.out.println("FULL UNIQUE LIST: " + full_node_list_unique.size());
 			int nodeCount = 0;
 			try (Transaction tx = graphDB.beginTx()) {
 				System.out.println("STARTING TRANSACTION...");
-				for (String nodeName : full_node_list) {
+				for (String nodeName : full_node_list_unique) {
 					nodeCount++;
 					addSingleNode(tx, currentLabel, "name", nodeName, null);
-					System.out.print("ADDED : " + count + " NODES.\r");
+//					System.out.print("ADDED : " + count + " NODES.\r");
 				}
 
 				tx.commit();
@@ -874,8 +915,19 @@ public class dataController {
 					Node secondNode = tx.findNode(currentLabel, "name", nodeName2);
 					@SuppressWarnings("unused")
 					Relationship relationship1 = firstNode.createRelationshipTo(secondNode, currentRelType);
-					@SuppressWarnings("unused")
-					Relationship relationship2 = secondNode.createRelationshipTo(firstNode, currentRelType);
+					if (weighted) {
+						int weight = Integer.parseInt(edgeLine.split(",")[2]);
+						relationship1.setProperty("weight", weight);
+					}
+					if (!directed) {
+						@SuppressWarnings("unused")
+						Relationship relationship2 = secondNode.createRelationshipTo(firstNode, currentRelType);
+						if (weighted) {
+							String weight = edgeLine.split(",")[2];
+							relationship2.setProperty("weight", weight);
+						}
+					}
+					
 					lineCounter++;
 					edgeLine = reader2.readLine();
 				}
@@ -895,7 +947,7 @@ public class dataController {
 		clearIndexes(graphDB, true);
 		createIndexes(graphDB, "cooccs", verbose);
 		System.out.println("LOADING BY METHODS");
-		loadEdgeListbyMethods(graphDB, inputfile, ',', 0, "cooccs");
+		loadEdgeListbyMethods(graphDB, inputfile, ',', 0, "cooccs", true, true);
 	}
 
 	/**

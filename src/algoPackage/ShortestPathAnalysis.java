@@ -89,9 +89,9 @@ public class ShortestPathAnalysis {
 		}
 	}
 
-	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType) {
+	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType, boolean verbose) {
 		fullStartTime = System.currentTimeMillis();
-
+		System.out.println("SHORTEST PATH - CREATING PATHEXPANDERS...");
 		try (Transaction tx = graphDB.beginTx()) {
 			List<Node> nodeList = new ArrayList<Node>();
 			ResourceIterable<Node> fullNodelist = tx.getAllNodes();
@@ -110,10 +110,9 @@ public class ShortestPathAnalysis {
 					PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), "count");
 
 			while (fullNodeListIterator.hasNext()) {
-
 				Node nodeFromFullList = fullNodeListIterator.next();
 				nodeList.add(nodeFromFullList);
-
+//
 //				System.out.println("NODE: " + nodeFromFullList.getProperty("name") + "  " + nodeFromFullList.getLabels());
 //				Iterator<Label> labelIterator = nodeFromFullList.getLabels().iterator();
 //				while (labelIterator.hasNext()) {
@@ -125,6 +124,7 @@ public class ShortestPathAnalysis {
 //					}
 //				}
 			}
+			
 			int nodeCount = nodeList.size();
 			System.out.println("FOUND " + nodeCount + " NODES.");
 			for (int i = 0; i < nodeCount; i++) {
@@ -135,13 +135,14 @@ public class ShortestPathAnalysis {
 				for (int j = 0; j < nodeCount; j++) {
 					Node endNode = nodeList.get(j);
 //					System.out.println(endNode.getProperty("name"));
-
-					executeFinderShortestPath(startNode, endNode, finderShortestPath);
+					
+					executeFinderShortestPath(startNode, endNode, finderShortestPath, verbose);
 
 //					executeFinderDijkstra(startNode, endNode, finderDijkstra);
 				}
-//				System.out.println("END: " + (System.currentTimeMillis() - startTime) + "ms.");
 			}
+			System.out.println("SHORTEST PATH FOR ALL NODES ENDED IN: " + (System.currentTimeMillis() - startTime) + "ms.");
+
 
 		}
 		System.out.println("FULL RUNTIME: " + (System.currentTimeMillis() - fullStartTime) + "ms.");
@@ -152,10 +153,13 @@ public class ShortestPathAnalysis {
 	 * @param endNode
 	 * @param finderShortestPath
 	 */
-	public void executeFinderShortestPath(Node startNode, Node endNode, PathFinder<Path> finderShortestPath) {
+	public void executeFinderShortestPath(Node startNode, Node endNode, PathFinder<Path> finderShortestPath, boolean verbose) {
 		startTime = System.nanoTime();
 		Path singleShortestPath = finderShortestPath.findSinglePath(startNode, endNode);
-		print_path(singleShortestPath, startNode, endNode);
+		if (verbose) {
+			print_path(singleShortestPath, startNode, endNode);
+			System.out.printf("%.9f s.\n", (double)((System.nanoTime() - startTime)/1000000000.0) );
+		}
 //
 //		if (singleShortestPath != null) {
 //			System.out.print("### shortestPath ### FOUND SHORTESTPATH IN " + (System.currentTimeMillis() - startTime)
@@ -166,7 +170,7 @@ public class ShortestPathAnalysis {
 //		} else {
 //			System.out.print("NO PATH - ");
 //		}
-		System.out.printf("%.9f s.\n", (double)((System.nanoTime() - startTime)/1000000000.0) );
+		
 	}
 
 	/**
