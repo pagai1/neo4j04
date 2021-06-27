@@ -36,36 +36,46 @@ public class EmbeddedNeo4j {
 //	private static final File pluginsFolder = new File("/home/pagai/graph-data/general_db_data/plugins");
 
 	private static Boolean cleanAndCreate = true;
-
+	private static Boolean doAlgo = false;
+	private static Boolean mainVerbose = false;
 	// ########################################################
 	// MOVIEDB
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/owndb01/").toPath();
 ////	private static final File inputFile = new File("/home/pagai/graph-data/tmdb.csv");
 //	private static final File inputFile = new File("/home/pagai/graph-data/tmdb_fixed.csv");
 //	private static String identifier = "movie";
+//	private static enums.Labels mainLabel = enums.Labels.PERSON;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
 
 //	 DEEZERDB
-	private static final Path databaseDirectory = new File("/home/pagai/graph-data/deezerdb/").toPath();
-//	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
-	private static final File inputFile = new File("/home/pagai/graph-data/pokec/soc-pokec-relationships_weighted.txt");
-	private static String identifier = "deezer";
-	private static enums.Labels mainLabel = enums.Labels.USER;
-	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_FRIEND_OF;
+//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/deezerdb/").toPath();
+////	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
+//	private static final File inputFile = new File("/home/pagai/graph-data/pokec/soc-pokec-relationships_weighted.txt");
+//	private static String identifier = "deezer";
+//	private static enums.Labels mainLabel = enums.Labels.USER;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_FRIEND_OF;
+
 	// COOCCSDB
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
 //	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
 //	private static String identifier = "cooccs";
+//	private static enums.Labels mainLabel = enums.Labels.SINGLE_NODE;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
+
 //	
 //	// COOCCSDB_EXTERNAL
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
 //	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
 //	private static String identifier = "cooccs";
+//	private static enums.Labels mainLabel = enums.Labels.SINGLE_NODE;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
 
-//	// GENERAL TESTS
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/general_tests/").toPath();
-//	private static final File inputFile = new File("/home/pagai/graph-data/general_tests.csv");
-//	private static String identifier = "general_tests";
-
+	// GENERAL TESTS
+	private static final Path databaseDirectory = new File("/home/pagai/graph-data/general_tests/").toPath();
+	private static final File inputFile = new File("/home/pagai/graph-data/general_tests.csv");
+	private static String identifier = "general_tests";
+	private static enums.Labels mainLabel = enums.Labels.SINGLE_NODE;
+	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
 	// ########################################################
 
 	/**
@@ -78,7 +88,8 @@ public class EmbeddedNeo4j {
 //	private static Map<String, String> config = MapUtil.stringMap("dbms.security.procedures.unrestricted", "gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*");
 //	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true");
 	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true", "dbms.security.procedures.unrestricted",
-			"gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*");
+			"gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*", "dbms.logs.query.time_logging_enabled", "true",
+			"dbms.logs.debug.level", "DEBUG", "dbms.tx_log.rotation.retention_policy", "500M size");
 
 	private static GraphDatabaseService graphDB;
 	private static DatabaseManagementService managementService;
@@ -100,79 +111,87 @@ public class EmbeddedNeo4j {
 
 // 		################ GENERAL TESTS ################
 
-//		for (int amount = 250000; amount <= 10000001; amount = amount + 250000) {
-//			myDataController.clearDB(graphDB,false);
-//			myDataController.clearIndexes(graphDB, false);
-//			myDataController.createNodes(amount, false);
-//		}
-
-//		myDataController.createIndexes(graphDB, identifier);
-//		myDataController.createNodes(amount);
-//		myDataController.makeCompleteGraph();
-//		myDataController.printAll(graphDB);
-
 //		################ COOCCS DATABASE ################
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).build();
 //		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).loadPropertiesFromFile(databaseConfig).build();
 
 //		##################################################
-		
-		for (int rounds = 0; rounds < 1; rounds = rounds + 10) {
-			System.out.println("######## STARTING WITH ROUND: " + rounds);
+//		rounds is here taken to use increasing amount of data and make loops to keep it running to test different sizes. Used for example in general tests.
+		for (int round = 25000; round < 1000001; round = round + 25000) {
+//			System.out.println("######## STARTING WITH ROUND: " + rounds);
+			if (mainVerbose) System.out.println("######## STARTING ############");
+
 			int lineLimit = 0;
 			if (cleanAndCreate) {
-				myDataController.clearDB(graphDB, false);
-				myDataController.clearIndexes(graphDB, false);
-				myDataController.createIndexes(graphDB, identifier, false);
+				Boolean clearAndCreateIndizesVerbose = false;
+				myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 100000);
+//				myDataController.clearDBByCypher(graphDB, clearAndCreateIndizesVerbose);
+				myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
+				myDataController.createIndexes(graphDB, identifier, clearAndCreateIndizesVerbose);
 
 				long startTime2 = System.currentTimeMillis();
 
 				if (identifier.equals("movie")) {
 					myDataController.loadDataFromCSVFile(inputFile, ",", graphDB, false, 1000);
+//					myDataController.printAll(graphDB);
 				}
 
 				if (identifier.equals("deezer")) {
-//				myDataController.runDeezerImportByMethods(inputFile, 10000, true, true);
-				myDataController.runDeezerImportByCypher(inputFile, 10000, true, true);
-//		 		myDataController.printAll(graphDB);
+					myDataController.runDeezerImportByMethods(inputFile, 10000000, true, true, 1000000);
+					myDataController.runDeezerImportByCypher(inputFile, 10000, true, true, 0);
+//		 			myDataController.printAll(graphDB);
 				}
 
 				if (identifier.equals("cooccs")) {
-					myDataController.runCooccsImportByMethods(inputFile, false);
+					myDataController.runCooccsImportByMethods(graphDB, inputFile, false, 0);
 				}
 
 				if (identifier.equals("general_tests")) {
-					for (int i = lineLimit; i < 10002; i = i++) {
-						System.out.println("################### RUNNING WITH " + lineLimit + " LINES.");
-						myDataController.loadDataFromCSVFile(inputFile, ",", graphDB, false, i);
-
-					}
+//					myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0);
+//					myDataController.createIndexes(graphDB, identifier, clearAndCreateIndizesVerbose);
+					myDataController.createNodes(round, mainLabel, false);
+//					myDataController.createIndexes(graphDB, identifier);
+//					myDataController.createNodes(amount);
+//					myDataController.makeCompleteGraph();
+//					myDataController.printAll(graphDB);
 				}
-				System.out.println("FINISHED IMPORT AFTER " + (System.currentTimeMillis() - startTime2) + "ms.");
-				try (Transaction tx = graphDB.beginTx()) {
-					System.out.println("NODES: " + tx.getAllNodes().stream().count());
-					System.out.println("EDGES: " + tx.getAllRelationships().stream().count());
+				if (mainVerbose) {
+					System.out.println("FINISHED IMPORT AFTER " + (System.currentTimeMillis() - startTime2) + "ms.");
+					try (Transaction tx = graphDB.beginTx()) {
+						System.out.println("########### DATABASE CONTENT ##########");
+						System.out.println("NODES: " + tx.getAllNodes().stream().count());
+						System.out.println("EDGES: " + tx.getAllRelationships().stream().count());
+					}
 				}
 
 			}
-			System.out.println("######## END WITH LINES: " + rounds);
+//			System.out.println("######## END WITH LINES: " + rounds);
 
 		}
 
-//		myMovieDataController.printAll(graphDB_movies);
-//		
-//		ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
+		if (doAlgo) {
+			/**
+			 * SHORTEST PATH
+			 */
+
+			ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
 //		SPAnalysis.getShortestPath(enums.Labels.USER, "5", enums.Labels.USER, "134", enums.RelationshipTypes.IS_FRIEND_OF);
-//		SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, false);
+			SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, false);
 //		ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
 //		SPAnalysis.getShortestPath(enums.Labels.ACTOR, "Forest Whitaker", enums.Labels.ACTOR, "Miles Teller");
 //		SPAnalysis.getAllShortestPaths(enums.Labels.SINGLE_NODE,enums.RelationshipTypes.IS_CONNECTED);
+
+			/**
+			 * PAGERANK
+			 */
 //		PageRankAnalysis PRAnalysis= new PageRankAnalysis(graphDB);
-//		
 //		PRAnalysis.listDBfunctions();
 //		PRAnalysis.setProperties();
 //		PRAnalysis.getPageRank();
 
+			/**
+			 * CYPHERS
+			 */
 //		@SuppressWarnings("unused")
 //		String query = "CALL apoc.export.csv.all(\"" + outputFile + "\", {})";
 //		@SuppressWarnings("unused")
@@ -182,9 +201,9 @@ public class EmbeddedNeo4j {
 
 //		String call_schema = "CALL db.schema()";
 
-		/**
-		 * The following Strings create Subgraphs for GDS-Algorithmtests
-		 */
+			/**
+			 * The following Strings create Subgraphs for GDS-Algorithmtests
+			 */
 
 //		@SuppressWarnings("unused")
 //		String createGraph = "CALL gds.graph.create( " +
@@ -194,32 +213,36 @@ public class EmbeddedNeo4j {
 //				"  {relationshipProperties: 'cost'})\n"	+ 
 //				"YIELD graphName, nodeCount, relationshipCount;\n";
 //
-		@SuppressWarnings("unused")
-		String createSubGraphMovieDB = "CALL gds.graph.create( 'SUBGRAPH', \n" + // temporary graph name
-				"  'PERSON', \n" + // Nodelabel
-				"  'ACTED_WITH')"; // Relation
+			@SuppressWarnings("unused")
+			String createSubGraphMovieDB = "CALL gds.graph.create( 'SUBGRAPH', \n" + // temporary graph name
+					"  'PERSON', \n" + // Nodelabel
+					"  'ACTED_WITH')"; // Relation
 
-		@SuppressWarnings("unused")
-		String createSubGraphTextProcessing = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
-				"  'SINGLE_NODE', \n" + // Nodelabel
-				"  'IS_CONNECTED')"; // Relation
+			@SuppressWarnings("unused")
+			String createSubGraphTextProcessing = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
+					"  'SINGLE_NODE', \n" + // Nodelabel
+					"  'IS_CONNECTED')"; // Relation
 
-		@SuppressWarnings("unused")
-		String createSubGraphDeezer = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
-				"  'USER', \n" + // Nodelabel
-				"  'IS_FRIEND_OF')"; // Relation
+			@SuppressWarnings("unused")
+			String createSubGraphDeezer = "CALL gds.graph.create( " + "  'SUBGRAPH', \n" + // temporary graph name
+					"  'USER', \n" + // Nodelabel
+					"  'IS_FRIEND_OF')"; // Relation
 
-		@SuppressWarnings("unused")
-		String createGraphALL = "CALL gds.graph.create( 'SUBGRAPH_ALL', '*', '*') ";
+			@SuppressWarnings("unused")
+			String createGraphALL = "CALL gds.graph.create( 'SUBGRAPH_ALL', '*', '*') ";
 //
 //		@SuppressWarnings("unused")
 //		String createGraphByCypher = "CALL gds.graph.create.cypher('SUBGRAPH','MATCH (n) RETURN id(n) AS id','MATCH (n)-[e]-(m) RETURN id(n) AS source, e.weight AS weight, id(m) AS target, type(e) as type')";
 //				
 
-		@SuppressWarnings("unused")
-		String createFullGraphByCypher = "CALL gds.graph.create.cypher( " + "  'SUBGRAPH', \n" + // temporary graph name
-				"  'MATCH (n) RETURN id(n) AS id', \n" + // Nodelabel
-				"  'MATCH (n)-[r]->(m) RETURN id(n) AS source, id(m) AS target, type(r) as type')"; // Relation
+			@SuppressWarnings("unused")
+			String createFullGraphByCypher = "CALL gds.graph.create.cypher( " + "  'SUBGRAPH', \n" + // temporary graph name
+					"  'MATCH (n) RETURN id(n) AS id', \n" + // Nodelabel
+					"  'MATCH (n)-[r]->(m) RETURN id(n) AS source, id(m) AS target, type(r) as type')"; // Relation
+
+			/**
+			 * CALL OF ALGORITHMS ON GRAPHS/SUBGRAPHS
+			 */
 
 //		@SuppressWarnings("unused")
 //		String betweenness = "CALL gds.betweenness.stream(\n" + 
@@ -232,7 +255,6 @@ public class EmbeddedNeo4j {
 //				"ORDER BY score ASC;";				
 //
 
-		
 //		@SuppressWarnings("unused")
 //		String allShortestPaths = "CALL gds.alpha.allShortestPaths.stream(\n"
 //				+ "{nodeProjection: 'USER',\n"
@@ -248,58 +270,51 @@ public class EmbeddedNeo4j {
 //				+ "RETURN sourceNode.name AS source, targetNode.name AS target, value\n" + 
 //				"ORDER BY value DESC, source ASC, target ASC\n" + 
 //				"LIMIT 10";
-		
-		@SuppressWarnings("unused")
-		String allShortestPaths = "CALL gds.alpha.allShortestPaths.stream(\n"
-				+ "{nodeProjection: 'USER',\n"
-				+ " relationshipProjection: {\n"
-				+ "		IS_FRIEND_OF: {\n"
-				+ "			type: 'IS_FRIEND_OF',\n"
-				+ "			properties: 'weight'\n"
-				+ "		}\n"
-				+ "	},\n"
-				+ "relationshipWeightProperty: 'weight'})\n"
-				+ "YIELD sourceNodeId, targetNodeId, distance\n"
-				+ "WITH sourceNodeId, targetNodeId, distance \n"
+
+			@SuppressWarnings("unused")
+			String allShortestPaths = "CALL gds.alpha.allShortestPaths.stream(\n" + "{nodeProjection: 'USER',\n" + " relationshipProjection: {\n"
+					+ "		IS_FRIEND_OF: {\n" + "			type: 'IS_FRIEND_OF',\n" + "			properties: 'weight'\n" + "		}\n" + "	},\n"
+					+ "relationshipWeightProperty: 'weight'})\n" + "YIELD sourceNodeId, targetNodeId, distance\n"
+					+ "WITH sourceNodeId, targetNodeId, distance \n"
 //				+ "WHERE gds.util.isFinite(distance) = true \n"
-				+ "MATCH (source:USER) WHERE id(source) = sourceNodeId \n"
-				+ "MATCH (target:USER) WHERE id(target) = targetNodeId \n"
-				+ "WITH source, target, distance WHERE source <> target \n"
-				+ "RETURN source.name AS source, target.name AS target, distance\n"
-				+ "ORDER BY distance ASC, source ASC, target ASC\n"; 
+					+ "MATCH (source:USER) WHERE id(source) = sourceNodeId \n" + "MATCH (target:USER) WHERE id(target) = targetNodeId \n"
+					+ "WITH source, target, distance WHERE source <> target \n" + "RETURN source.name AS source, target.name AS target, distance\n";
+//				+ "ORDER BY distance ASC, source ASC, target ASC\n"; 
 //				+ "LIMIT 10";
-		
-		@SuppressWarnings("unused")
-		String simRank = "CALL gds.nodeSimilarity.stream('SUBGRAPH') " + "YIELD node1, node2, similarity \n"
-				+ "RETURN gds.util.asNode(node1).name AS n1, gds.util.asNode(node2).name as n2, similarity \n"
-				+ "ORDER BY similarity DESCENDING, n1, n2";
 
-		@SuppressWarnings("unused")
-		String pageRank = "CALL gds.pageRank.stream('SUBGRAPH', { maxIterations: 100 })\n" + "YIELD nodeId, score \n"
-				+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
+			@SuppressWarnings("unused")
+			String simRank = "CALL gds.nodeSimilarity.stream('SUBGRAPH') " + "YIELD node1, node2, similarity \n"
+					+ "RETURN gds.util.asNode(node1).name AS n1, gds.util.asNode(node2).name as n2, similarity \n"
+					+ "ORDER BY similarity DESCENDING, n1, n2";
 
-		@SuppressWarnings("unused")
-		String pageRankAll = "CALL gds.pageRank.stream('SUBGRAPH_ALL', { maxIterations: 100 })\n" + "YIELD nodeId, score \n"
-				+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
+			@SuppressWarnings("unused")
+			String pageRank = "CALL gds.pageRank.stream('SUBGRAPH', { maxIterations: 100 })\n" + "YIELD nodeId, score \n"
+					+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
 
-		@SuppressWarnings("unused")
-		String pageRankWeighted = "CALL gds.pageRank.stream('SUBGRAPH') YIELD nodeId, score AS pageRank\n"
-				+ "WITH gds.util.asNode(nodeId) AS n, pageRank\n" + "MATCH (n)-[i:IS_CONNECTED]-()\n"
-				+ "RETURN n.name AS name, pageRank, count(i) AS degree, sum(i.count) AS weightedDegree\n" + "ORDER BY weightedDegree DESC LIMIT 25";
+			@SuppressWarnings("unused")
+			String pageRankAll = "CALL gds.pageRank.stream('SUBGRAPH_ALL', { maxIterations: 100 })\n" + "YIELD nodeId, score \n"
+					+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
 
-		@SuppressWarnings("unused")
-		String hits = "CALL gds.alpha.hits.stream('SUBGRAPH', {hitsIterations: 100}) \n" + "YIELD nodeId,values\n"
-				+ "RETURN gds.util.asNode(nodeId).name AS Name, values.auth AS auth, values.hub as hub \n" + "ORDER BY hub DESC";
+			@SuppressWarnings("unused")
+			String pageRankWeighted = "CALL gds.pageRank.stream('SUBGRAPH') YIELD nodeId, score AS pageRank\n"
+					+ "WITH gds.util.asNode(nodeId) AS n, pageRank\n" + "MATCH (n)-[i:IS_CONNECTED]-()\n"
+					+ "RETURN n.name AS name, pageRank, count(i) AS degree, sum(i.count) AS weightedDegree\n"
+					+ "ORDER BY weightedDegree DESC LIMIT 25";
 
-		@SuppressWarnings("unused")
-		String betweennessCentrality = "CALL gds.betweenness.stream(\n" + "  graphName: 'SUBGRAPH',\n" + "  configuration: 'SUBGRAPH'\n" + ")\n"
-				+ "YIELD nodeId,score";
+			@SuppressWarnings("unused")
+			String hits = "CALL gds.alpha.hits.stream('SUBGRAPH', {hitsIterations: 100}) \n" + "YIELD nodeId,values\n"
+					+ "RETURN gds.util.asNode(nodeId).name AS Name, values.auth AS auth, values.hub as hub \n" + "ORDER BY hub DESC";
 
-		@SuppressWarnings("unused")
-		String get_herr = "MATCH (n:SINGLE_NODE)-[rel:IS_CONNECTED]->(m:SINGLE_NODE) RETURN m.name, count(n)";
+			@SuppressWarnings("unused")
+			String betweennessCentrality = "CALL gds.betweenness.stream(\n" + "  graphName: 'SUBGRAPH',\n" + "  configuration: 'SUBGRAPH'\n" + ")\n"
+					+ "YIELD nodeId,score";
 
-////		
-		ExEngine = new ExecutionEngine(graphDB);
+			@SuppressWarnings("unused")
+			String get_herr = "MATCH (n:SINGLE_NODE)-[rel:IS_CONNECTED]->(m:SINGLE_NODE) RETURN m.name, count(n)";
+
+////	
+
+			ExEngine = new ExecutionEngine(graphDB);
 ////		ExEngine.runQuery(createGraphByCypher, true, false);
 //		String returnAllNodes = "MATCH (n) RETURN count(*)";
 //		ExEngine.runQuery(returnAllNodes, true, false);
@@ -308,20 +323,19 @@ public class EmbeddedNeo4j {
 //
 ////		ExEngine.runQuery(call_schema, true, false);
 
-		/**
-		 * SUBGRAPHCREATION
-		 */
+			/**
+			 * SUBGRAPHCREATION
+			 */
 //		ExEngine.runQuery(createFullGraphByCypher, true, true, " ");
 //		ExEngine.runQuery(createSubGraphMovieDB, true, false, " ");
 //		ExEngine.runQuery(createSubGraphDeezer, true, false, " ");
-		
-		
+
 //		ExEngine.runQuery(createGraphALL, true ,false, "");
 
-		/**
-		 * ALGOS		
-		 */
-		ExEngine.runQuery(allShortestPaths, true, false, " ");
+			/**
+			 * ALGOS
+			 */
+			ExEngine.runQuery(allShortestPaths, false, false, " ");
 //		ExEngine.runQuery(pageRank, true, true);
 
 //
@@ -338,11 +352,11 @@ public class EmbeddedNeo4j {
 ////		String startNode = "bums";
 ////		ExEngine.runShortestPathByCypher(startNode, endNode, true);
 //		
-
+		}
 		managementService.shutdown();
 
 //		managementServiceDeezer.shutdown();
-		System.out.println("SHUTTING DOWN AFTER " + (System.currentTimeMillis() - startTime) + "ms.");
+		if (mainVerbose) System.out.println("SHUTTING DOWN AFTER " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
 //	@SuppressWarnings("unused")

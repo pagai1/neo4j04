@@ -29,8 +29,8 @@ public class ExecutionEngine {
 	 * 
 	 * @param query          - Inputquery as string
 	 * @param verbose        - print result of query
-	 * @param extraLinebreak - Output-lines receive an extra linebreak, sometimes
-	 *                       good for better output.
+	 * @param extraLinebreak - Output-lines receive an extra linebreak, sometimes good for better output.
+	 * 
 	 */
 	public void runQuery(String query, Boolean verbose, Boolean extraLinebreak, String extraField) {
 		try (Transaction tx = graphDB.beginTx()) {

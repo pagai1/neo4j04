@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-
 import org.neo4j.graphalgo.BasicEvaluationContext;
 import org.neo4j.graphalgo.CommonEvaluators;
 import org.neo4j.graphalgo.CostEvaluator;
@@ -36,7 +35,8 @@ import org.neo4j.graphdb.Node;
 public class ShortestPathAnalysis {
 
 	private static GraphDatabaseService graphDB;
-	private static double startTime;
+	private static long startTime;
+	private static double startTimeSingle;
 	private static long endTime;
 	private static long runTime;
 	private static long fullStartTime;
@@ -89,9 +89,17 @@ public class ShortestPathAnalysis {
 		}
 	}
 
+	/**
+	 * Method gets all shortest paths between all nodes
+	 * 
+	 * @param label            - Which label shall have the nodes?
+	 * @param relationShipType - which relationship type shall be used in
+	 *                         pathfinding?
+	 * @param verbose          - give output with informations about paths
+	 */
 	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType, boolean verbose) {
 		fullStartTime = System.currentTimeMillis();
-		System.out.println("SHORTEST PATH - CREATING PATHEXPANDERS...");
+		System.out.println("SHORTEST PATH - CREATING PATHFINDERS...");
 		try (Transaction tx = graphDB.beginTx()) {
 			List<Node> nodeList = new ArrayList<Node>();
 			ResourceIterable<Node> fullNodelist = tx.getAllNodes();
@@ -107,7 +115,7 @@ public class ShortestPathAnalysis {
 			// Returns an algorithm which can find all shortest paths (that is paths with as
 			// short Path.length() as possible) between two nodes.
 			PathFinder<WeightedPath> finderDijkstra = GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
-					PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), "count");
+					PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), "weight");
 
 			while (fullNodeListIterator.hasNext()) {
 				Node nodeFromFullList = fullNodeListIterator.next();
@@ -124,25 +132,24 @@ public class ShortestPathAnalysis {
 //					}
 //				}
 			}
-			
+
 			int nodeCount = nodeList.size();
 			System.out.println("FOUND " + nodeCount + " NODES.");
+			startTime = System.currentTimeMillis();
 			for (int i = 0; i < nodeCount; i++) {
-				startTime = System.currentTimeMillis();
 				Node startNode = nodeList.get(i);
 //				System.out.print("STARTNODE: " + startNode.getProperty("name") + " ");
 //				for (int j = i + 1; j < nodeCount; j++) {
 				for (int j = 0; j < nodeCount; j++) {
 					Node endNode = nodeList.get(j);
 //					System.out.println(endNode.getProperty("name"));
-					
+
 					executeFinderShortestPath(startNode, endNode, finderShortestPath, verbose);
 
-//					executeFinderDijkstra(startNode, endNode, finderDijkstra);
+					executeFinderDijkstra(startNode, endNode, finderDijkstra, verbose);
 				}
 			}
 			System.out.println("SHORTEST PATH FOR ALL NODES ENDED IN: " + (System.currentTimeMillis() - startTime) + "ms.");
-
 
 		}
 		System.out.println("FULL RUNTIME: " + (System.currentTimeMillis() - fullStartTime) + "ms.");
@@ -154,11 +161,11 @@ public class ShortestPathAnalysis {
 	 * @param finderShortestPath
 	 */
 	public void executeFinderShortestPath(Node startNode, Node endNode, PathFinder<Path> finderShortestPath, boolean verbose) {
-		startTime = System.nanoTime();
+		startTimeSingle = System.nanoTime();
 		Path singleShortestPath = finderShortestPath.findSinglePath(startNode, endNode);
 		if (verbose) {
 			print_path(singleShortestPath, startNode, endNode);
-			System.out.printf("%.9f s.\n", (double)((System.nanoTime() - startTime)/1000000000.0) );
+			System.out.printf("%.9f s.\n", (double) ((System.nanoTime() - startTimeSingle) / 1000000000.0));
 		}
 //
 //		if (singleShortestPath != null) {
@@ -170,7 +177,7 @@ public class ShortestPathAnalysis {
 //		} else {
 //			System.out.print("NO PATH - ");
 //		}
-		
+
 	}
 
 	/**
@@ -197,41 +204,29 @@ public class ShortestPathAnalysis {
 	 * @param endNode
 	 * @param finderDijkstra
 	 */
-	public void executeFinderDijkstra(Node startNode, Node endNode, PathFinder<WeightedPath> finderDijkstra) {
-//		startTime = System.currentTimeMillis();
+	public void executeFinderDijkstra(Node startNode, Node endNode, PathFinder<WeightedPath> finderDijkstra, Boolean verbose) {
+		startTimeSingle = System.nanoTime();
 		Path singlePathDijkstra = finderDijkstra.findSinglePath(startNode, endNode);
-//		print_path(singlePathDijkstra, startNode, endNode);
-//		System.out.println((System.currentTimeMillis() - startTime) + "ms.");
+		if (verbose) {
+			print_path(singlePathDijkstra, startNode, endNode);
+			System.out.printf("%.9f s.\n", (double) ((System.nanoTime() - startTimeSingle) / 1000000000.0));
+		}
 	}
 
-	public void findShortestPathByCypher(String nodeName1, String nodeName2 ) {
+	public void findShortestPathByCypher(String nodeName1, String nodeName2) {
 
-		String query = "MATCH (start:user {name: '" + nodeName1 +"'}), (end:user {name: '" + nodeName2 + "'})\n" + 
-				""
-				+ "CALL gds.beta.shortestPath.dijkstra.stream({\n" + 
-				"      nodeProjection: '*',\n" + 
-				"  relationshipProjection: {\n" + 
-				"    all: {\n" + 
-				"      type: 'IS_FRIEND_OF',\n" + 
-				"      orientation: 'UNDIRECTED'\n" + 
-				"    }\n" + 
-				"  },\n" + 
-				"  sourceNode: id(start),\n" + 
-				"  targetNode: id(end) })\n" + 
-				"YIELD nodeIds,sourceNode,targetNode,totalCost,index\n" +
-				"RETURN\n" + 
-				"    index,\n" + 
-				"    gds.util.asNode(sourceNode).name AS sourceNodeName,\n" + 
-				"    gds.util.asNode(targetNode).name AS targetNodeName,\n" + 
-				"    totalCost,\n" + 
-				"    [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodeNames\n"+
-				"	 ORDER BY index";
+		String query = "MATCH (start:user {name: '" + nodeName1 + "'}), (end:user {name: '" + nodeName2 + "'})\n" + ""
+				+ "CALL gds.beta.shortestPath.dijkstra.stream({\n" + "      nodeProjection: '*',\n" + "  relationshipProjection: {\n" + "    all: {\n"
+				+ "      type: 'IS_FRIEND_OF',\n" + "      orientation: 'UNDIRECTED'\n" + "    }\n" + "  },\n" + "  sourceNode: id(start),\n"
+				+ "  targetNode: id(end) })\n" + "YIELD nodeIds,sourceNode,targetNode,totalCost,index\n" + "RETURN\n" + "    index,\n"
+				+ "    gds.util.asNode(sourceNode).name AS sourceNodeName,\n" + "    gds.util.asNode(targetNode).name AS targetNodeName,\n"
+				+ "    totalCost,\n" + "    [nodeId IN nodeIds | gds.util.asNode(nodeId).name] AS nodeNames\n" + "	 ORDER BY index";
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 1
 			long startTimeQuery = System.currentTimeMillis();
 			Result result = tx.execute(query);
 			System.out.println("TOOK: " + (System.currentTimeMillis() - startTimeQuery) + "ms.");
-			long startTimeClose = System.currentTimeMillis(); 
+			long startTimeClose = System.currentTimeMillis();
 			tx.close();
 			System.out.println("CLOSE TOOK: " + (System.currentTimeMillis() - startTimeClose) + "ms.");
 			while (result.hasNext()) {
@@ -244,6 +239,6 @@ public class ShortestPathAnalysis {
 			}
 //			System.out.println(rows);
 			System.out.println("QUERY FINISHED.");
-		}	
+		}
 	}
 }
