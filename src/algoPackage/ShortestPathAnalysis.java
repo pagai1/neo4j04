@@ -7,24 +7,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.neo4j.graphalgo.BasicEvaluationContext;
-import org.neo4j.graphalgo.CommonEvaluators;
-import org.neo4j.graphalgo.CostEvaluator;
-import org.neo4j.graphalgo.EstimateEvaluator;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphalgo.WeightedPath;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpanders;
-import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterable;
-import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-
-import com.fasterxml.jackson.databind.ser.std.EnumSerializer;
 
 import enums.Labels;
 
@@ -37,22 +29,16 @@ public class ShortestPathAnalysis {
 	private static GraphDatabaseService graphDB;
 	private static long startTime;
 	private static double startTimeSingle;
-	private static long endTime;
-	private static long runTime;
 	private static long fullStartTime;
-	private static long startTimeDijkstra;
-	private static long startTimeShortestPath;
-
 	// Constructor
-	public ShortestPathAnalysis(GraphDatabaseService graphDB) {
-		this.graphDB = graphDB;
+	public ShortestPathAnalysis(GraphDatabaseService inputGraphDB) {
+		graphDB = inputGraphDB;
 	}
 
 	public void getShortestPath(Label node1Label, String node1Name, Label node2Label, String node2Name, RelationshipType relType) {
 		try (Transaction tx = graphDB.beginTx()) {
 			Node startNode = null;
 			Node endNode = null;
-			int peng = 0;
 			ResourceIterable<Node> nodeList = tx.getAllNodes();
 
 			for (Node tmpNode : nodeList) {
@@ -77,10 +63,7 @@ public class ShortestPathAnalysis {
 			PathFinder<Path> finderShortestPath = GraphAlgoFactory.shortestPath(new BasicEvaluationContext(tx, graphDB),
 					PathExpanders.forTypeAndDirection(relType, Direction.BOTH), 100);
 
-//			CostEvaluator<String> costEvaluator;
-//			EstimateEvaluator<String> estimateEvaluator;
-//
-			PathFinder<WeightedPath> finderAStar = GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
+GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
 					PathExpanders.forTypeAndDirection(relType, Direction.BOTH), "bums");
 			System.out.println("EXECUTED SHORTESTPATH IN " + (System.currentTimeMillis() - startTimeAlgo) + " ms.");
 

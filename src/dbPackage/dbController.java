@@ -5,28 +5,14 @@ import java.io.IOException;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.configuration.*;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.graphdb.factory.*;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.PathExpanders;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
-
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-
-
-import org.neo4j.kernel.*;
 
 public class dbController<managementService> {
 	
-    private GraphDatabaseService graphDB;
+    @SuppressWarnings("unused")
+	private GraphDatabaseService graphDB;
     private DatabaseManagementService managementService;
     Relationship relationship;
 	
@@ -53,6 +39,7 @@ public class dbController<managementService> {
 	 * @return
 	 * @throws IOException
 	 */
+	@SuppressWarnings("removal")
 	private GraphDatabaseService createDb(File dbDirectory) throws IOException{
         managementService = new DatabaseManagementServiceBuilder( dbDirectory ).build();
         GraphDatabaseService newgraphDB = managementService.database( DEFAULT_DATABASE_NAME );

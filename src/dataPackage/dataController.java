@@ -6,7 +6,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,7 +22,7 @@ import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 
-import enums.Labels;
+import enums.*;
 
 public class dataController {
 
@@ -33,7 +33,7 @@ public class dataController {
 	private static BufferedReader reader2;
 
 	public static int lineCountLimit = 0;
-	public static HashMap personMap = new HashMap();
+	public static HashMap<String, Boolean> personMap = new HashMap<String, Boolean>();
 	public static List<String> full_actor_list = new ArrayList<String>();
 	public static List<String> full_director_list = new ArrayList<String>();
 	public static List<String> full_company_list = new ArrayList<String>();
@@ -79,16 +79,15 @@ public class dataController {
 	/**
 	 * Loads given number (limit) of lines from edgeList.
 	 * 
-	 * @param inputFile_deezer path to file
+	 * @param inputFile        path to file
 	 * @param limit            number of lines to be loaded from inputfile
-	 * @param weighted         if true, third row of csv will be taken as
-	 *                         weight-value
+	 * @param weighted         if true, third row of csv will be taken as weight-value
 	 * @param directed         if false, for each line 2 relations will be created
 	 * @param periodicCommit   Periodic commit after a given number of transactions.
 	 */
-	public void runDeezerImportByMethods(File inputFile, int limit, boolean weighted, boolean directed, int periodicCommit) {
-		System.out.println("LOADING EDGELIST BY METHODS");
-		loadEdgeListbyMethods(graphDB, inputFile, ',', limit, "deezer", weighted, directed, periodicCommit);
+	public void runDeezerImportByMethods(File inputFile, int limit, boolean weighted, boolean directed, int periodicCommit, boolean verbose) {
+		if (verbose) System.out.println("LOADING EDGELIST BY METHODS");
+		loadEdgeListbyMethods(graphDB, inputFile, ',', limit, "deezer", weighted, directed, periodicCommit, verbose);
 	}
 
 	public int getNumberOfLines(File inputFile) throws IOException {
@@ -105,22 +104,24 @@ public class dataController {
 	 * Loads data from given CSV file.
 	 * 
 	 * @param inputFile    - The inputfile to be loaded.
-	 * @param delimiterm   - The delimiter character.
+	 * @param delimiter    - The delimiter character.
 	 * @param inputgraphDb - The database to load the data in.
 	 * @param clearGraph   - If true the graph will be cleared before inserting.
 	 * @param limit        - max-linenumber. "all" if "0".
 	 */
-	public void loadDataFromCSVFile(File inputFile, String delimiterm, GraphDatabaseService inputgraphDb, boolean clearGraph, int limit) {
+	public void loadDataFromCSVFile(File inputFile, String delimiter, GraphDatabaseService inputgraphDb, boolean clearGraph, int limit, boolean verbose) {
 
 		try {
+			// FINDING OUT THE MAXIMUM POSSIBLE.
+			int lineCount = getNumberOfLines(inputFile) - 1;
 			if (limit == 0) {
-				lineCountLimit = getNumberOfLines(inputFile) - 1;
+				lineCountLimit = lineCount;
 			} else {
-				lineCountLimit = limit;
+				lineCountLimit = Math.min(limit, lineCount);
 //				linecount = 100;	
 			}
 
-			System.out.println("LOADING " + lineCountLimit + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
+			if (verbose) System.out.println("LOADING " + lineCountLimit + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
 			String[] headers, headers2;
 			startTime = System.currentTimeMillis();
 			reader = new BufferedReader(new FileReader(inputFile));
@@ -143,7 +144,7 @@ public class dataController {
 
 			readFile2(graphDB, reader2, headers2, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list,
 					full_person_list);
-			System.out.println("READ " + lineCountLimit + " ENTRIES IN " + (System.currentTimeMillis() - startTime) + " ms.");
+			if (verbose) System.out.println("READ " + lineCountLimit + " ENTRIES IN " + (System.currentTimeMillis() - startTime) + " ms.");
 //			printAll(graphDB);
 
 		} catch (IOException e) {
@@ -153,7 +154,8 @@ public class dataController {
 
 	/**
 	 * Removes all nodes and all relationships within graph.
-	 * @param graphDb   - the graphdatabase
+	 * 
+	 * @param graphDb        - the graphdatabase
 	 * @param verbose        - give output
 	 * @param periodicCommit - commit deletion after given number of transactions
 	 * 
@@ -162,12 +164,10 @@ public class dataController {
 		Transaction tx = graphDB.beginTx();
 		int relCount = 0;
 		try {
-			if (verbose)
-				System.out.println("REMOVING ALL RELATIONSHIPS...");
+			if (verbose) System.out.println("REMOVING ALL RELATIONSHIPS...");
 			startTime = System.currentTimeMillis();
 			Iterable<Relationship> allRelationships = tx.getAllRelationships();
 			for (Relationship relationship : allRelationships) {
-				System.out.println("PENG");
 				relCount = relCount + 1;
 				relationship.delete();
 				if (periodicCommit != 0) {
@@ -176,8 +176,10 @@ public class dataController {
 						System.out.println("BUMS: " + relCount);
 						tx.commit();
 						System.out.println("COMMITTED");
-//						tx.close();
-//						tx = graphDB.beginTx();
+						tx.close();
+						System.out.println("CLOSED");
+						tx = graphDB.beginTx();
+						System.out.println("BEGIN");
 					}
 				}
 			}
@@ -232,8 +234,9 @@ public class dataController {
 			List<String> full_director_list, List<String> full_company_list, List<String> full_genre_list, List<String> full_keyword_list,
 			List<String> full_person_list) throws IOException {
 		String[] movieline = headers;
+//		String nextMovieLine;
 		List<String> roleList = new ArrayList<>();
-
+//		movieline = reader.readLine().split((",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"));
 		int count = 0;
 		try (Transaction tx = graphDB.beginTx()) {
 			while ((movieline != null) & count < (lineCountLimit - 1)) {
@@ -248,17 +251,17 @@ public class dataController {
 						for (String actor : movieline[i].split("\\|")) {
 							if (!full_actor_list.contains(actor)) {
 								full_actor_list.add(actor);
-//								System.out.println("ADDED ACTOR: " + actor);
 							}
 							if (!full_person_list.contains(actor)) {
 								full_person_list.add(actor);
+
 							}
 
-//							if (!checkIfExists("name", actor, enums.Labels.ACTOR)) {
+//							if (!checkIfExists("name", actor, Labels.ACTOR)) {
 //								if (!full_actor_list.contains(actor.toString()) == false ) {
 //									full_actor_list.add(actor);
 //								}
-////								Node actorNode = tx.createNode(enums.Labels.ACTOR);
+////								Node actorNode = tx.createNode(Labels.ACTOR);
 ////								actorNode.setProperty("name", actor);
 //							}
 						}
@@ -272,11 +275,11 @@ public class dataController {
 								full_person_list.add(director);
 							}
 
-//							if (!checkIfExists("name", director, enums.Labels.DIRECTOR)) {
+//							if (!checkIfExists("name", director, Labels.DIRECTOR)) {
 //								if (!full_director_list.contains(director.toString())) {
 //									full_director_list.add(director);
 //								}
-////								Node directorNode = tx.createNode(enums.Labels.DIRECTOR);
+////								Node directorNode = tx.createNode(Labels.DIRECTOR);
 ////								directorNode.setProperty("name", director);
 //							}
 						}
@@ -287,7 +290,7 @@ public class dataController {
 								full_company_list.add(company);
 							}
 
-//							Node companyNode = tx.createNode(enums.Labels.PRODUCTION_COMPANY);
+//							Node companyNode = tx.createNode(Labels.PRODUCTION_COMPANY);
 //							companyNode.setProperty("name", company);
 						}
 					}
@@ -307,6 +310,14 @@ public class dataController {
 						}
 					}
 				}
+//				nextMovieLine = reader.readLine();
+//				if (nextMovieLine != null) {
+//					System.out.println(nextMovieLine);
+//					movieline = nextMovieLine.split((",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"));
+//				} else {
+//					movieline = null;
+//				}
+				
 			}
 			roleList.clear();
 			for (String value : full_person_list) {
@@ -320,43 +331,43 @@ public class dataController {
 				}
 //				System.out.println(personMap);
 //				personMap.put("roles", roleList);
-				if (!checkIfExists("name", value, enums.Labels.PERSON)) {
-					addSingleNode(tx, enums.Labels.PERSON, "name", value, personMap);
+				if (!checkIfExists("name", value, Labels.PERSON)) {
+					addSingleNode(tx, Labels.PERSON, "name", value, personMap);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
 			}
 //			for (String value : full_actor_list) {
-//				if (!checkIfExists("name", value, enums.Labels.ACTOR)) {
-//					addSingleNode(tx, enums.Labels.ACTOR, "name", value);
+//				if (!checkIfExists("name", value, Labels.ACTOR)) {
+//					addSingleNode(tx, Labels.ACTOR, "name", value);
 //				} else {
 //					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 //				}
 //			}
 //			for (String value : full_director_list) {
-//				if (!checkIfExists("name", value, enums.Labels.DIRECTOR)) {
-//					addSingleNode(tx, enums.Labels.DIRECTOR, "name", value);
+//				if (!checkIfExists("name", value, Labels.DIRECTOR)) {
+//					addSingleNode(tx, Labels.DIRECTOR, "name", value);
 //				} else {
 //					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 //				}
 //			}
 			for (String value : full_company_list) {
-				if (!checkIfExists("name", value, enums.Labels.PRODUCTION_COMPANY)) {
-					addSingleNode(tx, enums.Labels.PRODUCTION_COMPANY, "name", value, null);
+				if (!checkIfExists("name", value, Labels.PRODUCTION_COMPANY)) {
+					addSingleNode(tx, Labels.PRODUCTION_COMPANY, "name", value, null);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
 			}
 			for (String value : full_keyword_list) {
-				if (!checkIfExists("name", value, enums.Labels.KEYWORD)) {
-					addSingleNode(tx, enums.Labels.KEYWORD, "name", value, null);
+				if (!checkIfExists("name", value, Labels.KEYWORD)) {
+					addSingleNode(tx, Labels.KEYWORD, "name", value, null);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
 			}
 			for (String value : full_genre_list) {
-				if (!checkIfExists("name", value, enums.Labels.GENRE)) {
-					addSingleNode(tx, enums.Labels.GENRE, "name", value, null);
+				if (!checkIfExists("name", value, Labels.GENRE)) {
+					addSingleNode(tx, Labels.GENRE, "name", value, null);
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
@@ -390,7 +401,7 @@ public class dataController {
 				movieline = reader.readLine().split((",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"));
 				count2++;
 //				System.out.println("MOVIELINE2: " + count2);
-				Node movieNode = tx.createNode(enums.Labels.MOVIE);
+				Node movieNode = tx.createNode(Labels.MOVIE);
 				for (int i = 0; i < headers.length; i++) {
 					if (headers[i].equals("original_title")) {
 						movieNode.setProperty("name", movieline[i]);
@@ -400,22 +411,23 @@ public class dataController {
 //				}
 //				for (int i = 0; i < headers.length; i++) 
 //					{
-					if (movieline[i].equals(" ")) {
+					if (movieline[i].equals(" ") || movieline[i] == null ) {
 						movieNode.setProperty(headers[i], "unknown");
 					} else {
 						movieNode.setProperty(headers[i], movieline[i]);
 						if (headers[i].equals("cast")) {
 							for (String actor : movieline[i].split("\\|")) {
-								Relationship relationshipMovie = (tx.findNode(enums.Labels.PERSON, "name", actor)).createRelationshipTo(movieNode,
-										enums.RelationshipTypes.ACTED_IN);
+								@SuppressWarnings("unused")
+								Relationship relationshipMovie = (tx.findNode(Labels.PERSON, "name", actor)).createRelationshipTo(movieNode,
+										RelationshipTypes.ACTED_IN);
 								for (String actor2 : movieline[i].split("\\|")) {
 									if (!actor.equals(actor2)) {
 //										System.out.println("ADDING RELATION BETWEEN: " + actor + " AND " + actor2);
-										Relationship relationship = (tx.findNode(enums.Labels.PERSON, "name", actor)).createRelationshipTo(
-												tx.findNode(enums.Labels.PERSON, "name", actor2), enums.RelationshipTypes.ACTED_WITH);
+										Relationship relationship = (tx.findNode(Labels.PERSON, "name", actor))
+												.createRelationshipTo(tx.findNode(Labels.PERSON, "name", actor2), RelationshipTypes.ACTED_WITH);
 										relationship.setProperty("count", 1);
-//										Relationship relationship2 = (tx.findNode(enums.Labels.ACTOR, "name", actor2)).createRelationshipTo(
-//												tx.findNode(enums.Labels.ACTOR, "name", actor), enums.RelationshipTypes.ACTED_WITH);
+//										Relationship relationship2 = (tx.findNode(Labels.ACTOR, "name", actor2)).createRelationshipTo(
+//												tx.findNode(Labels.ACTOR, "name", actor), RelationshipTypes.ACTED_WITH);
 //										relationship2.setProperty("count", 1);
 									}
 								}
@@ -424,31 +436,31 @@ public class dataController {
 						if (headers[i].equals("director")) {
 							for (String director : movieline[i].split("\\|")) {
 //								System.out.println("DIRECTOR: " + director);
-								Relationship relationship3 = (tx.findNode(enums.Labels.PERSON, "name", director)).createRelationshipTo(movieNode,
-										enums.RelationshipTypes.DIRECTED);
+								Relationship relationship3 = (tx.findNode(Labels.PERSON, "name", director)).createRelationshipTo(movieNode,
+										RelationshipTypes.DIRECTED);
 								relationship3.setProperty("count", 1);
 							}
 						}
 						if (headers[i].equals("keywords")) {
 							for (String keyword : movieline[i].split("\\|")) {
-								Relationship relationship4 = (movieNode).createRelationshipTo(tx.findNode(enums.Labels.KEYWORD, "name", keyword),
-										enums.RelationshipTypes.HAS_KEYWORD);
+								Relationship relationship4 = (movieNode).createRelationshipTo(tx.findNode(Labels.KEYWORD, "name", keyword),
+										RelationshipTypes.HAS_KEYWORD);
 								relationship4.setProperty("count", 1);
 
 							}
 						}
 						if (headers[i].equals("genres")) {
 							for (String genre : movieline[i].split("\\|")) {
-								Relationship relationship5 = (movieNode).createRelationshipTo(tx.findNode(enums.Labels.GENRE, "name", genre),
-										enums.RelationshipTypes.IN_GENRE);
+								Relationship relationship5 = (movieNode).createRelationshipTo(tx.findNode(Labels.GENRE, "name", genre),
+										RelationshipTypes.IN_GENRE);
 								relationship5.setProperty("count", 1);
 
 							}
 						}
 						if (headers[i].equals("production_companies")) {
 							for (String company : movieline[i].split("\\|")) {
-								Relationship relationship6 = (tx.findNode(enums.Labels.PRODUCTION_COMPANY, "name", company))
-										.createRelationshipTo(movieNode, enums.RelationshipTypes.PRODUCED);
+								Relationship relationship6 = (tx.findNode(Labels.PRODUCTION_COMPANY, "name", company)).createRelationshipTo(movieNode,
+										RelationshipTypes.PRODUCED);
 								relationship6.setProperty("count", 1);
 
 							}
@@ -470,13 +482,14 @@ public class dataController {
 	 * @param label
 	 * @param nodeName
 	 */
-	private void addSingleNode(Transaction tx2, enums.Labels label, String nameProperty, String nodeName, HashMap properties) {
+	private void addSingleNode(Transaction tx2, Labels label, String nameProperty, String nodeName, HashMap<String, Boolean> properties) {
 //		System.out.println("ADDING " + label.toString() + " " + nodeName);
 		Node node = tx2.createNode(label);
 		node.setProperty(nameProperty, nodeName);
 		if (properties != null) {
-			Iterator propertyIterator = properties.entrySet().iterator();
+			Iterator<?> propertyIterator = properties.entrySet().iterator();
 			while (propertyIterator.hasNext()) {
+				@SuppressWarnings("rawtypes")
 				HashMap.Entry propertyEntry = (HashMap.Entry) propertyIterator.next();
 				node.setProperty((String) propertyEntry.getKey(), propertyEntry.getValue());
 			}
@@ -492,7 +505,8 @@ public class dataController {
 	 * @param propertyName
 	 * @param propertyValue
 	 */
-	private void addPropertyToNode(Transaction tx2, enums.Labels label, String nodeName, String propertyName, String propertyValue) {
+	@SuppressWarnings("unused")
+	private void addPropertyToNode(Transaction tx2, Labels label, String nodeName, String propertyName, String propertyValue) {
 		Node node = tx2.findNode(label, propertyName, propertyValue);
 		node.setProperty("name", nodeName);
 	}
@@ -505,7 +519,7 @@ public class dataController {
 	 * @param inputLabel
 	 * @return
 	 */
-	private boolean checkIfExists(String property, String name, enums.Labels inputLabel) {
+	private boolean checkIfExists(String property, String name, Labels inputLabel) {
 		boolean found = false;
 		try (Transaction tx = graphDB.beginTx()) {
 //			System.out.println("SEARCHING: " + name + " IN PROPERTY: " + property);
@@ -520,6 +534,7 @@ public class dataController {
 
 	/**
 	 * Prints out all Nodes with their names and labels
+	 * 
 	 * @param inputgraphDb
 	 */
 	public void printAll(GraphDatabaseService inputgraphDb) {
@@ -556,7 +571,7 @@ public class dataController {
 			createIndexesDeezerDB(graphDB, verbose);
 		}
 		if (identifier.equals("movie")) {
-			createIndexesMovieDB(graphDB);
+			createIndexesMovieDB(graphDB, verbose);
 		}
 		if (identifier.equals("general_tests")) {
 //			createIndexesByCypherGeneralTests(graphDB);
@@ -570,7 +585,7 @@ public class dataController {
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
-			userIndex = schema.indexFor(enums.Labels.SINGLE_NODE).on("name").withName("nodenames").create();
+			userIndex = schema.indexFor(Labels.SINGLE_NODE).on("name").withName("nodenames").create();
 			tx.commit();
 			if (verbose)
 				System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
@@ -580,10 +595,12 @@ public class dataController {
 	}
 
 	/**
-	 * Creates an index for general tests
-	 * Executes "CREATE INDEX name IF NOT EXISTS FOR (u:SINGLE_NODE) ON (u.name)"
+	 * Creates an index for general tests Executes "CREATE INDEX name IF NOT EXISTS
+	 * FOR (u:SINGLE_NODE) ON (u.name)"
+	 * 
 	 * @param graphDB - give a database instance
 	 */
+	@SuppressWarnings("unused")
 	private void createIndexesByCypherGeneralTests(GraphDatabaseService graphDB) {
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 1
@@ -592,10 +609,11 @@ public class dataController {
 			tx.commit();
 		}
 	}
-	
+
 	/**
-	 * Creates an index for general tests
-	 * Executes "CREATE INDEX name IF NOT EXISTS FOR (u:user) ON (u.name);"
+	 * Creates an index for general tests Executes "CREATE INDEX name IF NOT EXISTS
+	 * FOR (u:user) ON (u.name);"
+	 * 
 	 * @param graphDB - give a database instance
 	 */
 	public void createIndexesDeezerDBByCypher(GraphDatabaseService graphDB) {
@@ -609,6 +627,7 @@ public class dataController {
 
 	/**
 	 * This function creates the index of nodes for cooccs-db.
+	 * 
 	 * @param graphDB - database instance
 	 */
 	@SuppressWarnings("unused")
@@ -632,7 +651,7 @@ public class dataController {
 
 //		try (Transaction tx = graphDB.beginTx()) {
 //			Schema schema = tx.schema();
-//			schema.constraintFor(enums.Labels.USER).assertPropertyIsUnique("name").withName("usernames").create();
+//			schema.constraintFor(Labels.USER).assertPropertyIsUnique("name").withName("usernames").create();
 //			tx.commit();
 //			System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
 //		}
@@ -651,7 +670,7 @@ public class dataController {
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
-			userIndex = schema.indexFor(enums.Labels.USER).on("name").withName("usernames").create();
+			userIndex = schema.indexFor(Labels.USER).on("name").withName("usernames").create();
 			tx.commit();
 			if (verbose)
 				System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
@@ -661,7 +680,7 @@ public class dataController {
 
 //		try (Transaction tx = graphDB.beginTx()) {
 //			Schema schema = tx.schema();
-//			schema.constraintFor(enums.Labels.USER).assertPropertyIsUnique("name").withName("usernames").create();
+//			schema.constraintFor(Labels.USER).assertPropertyIsUnique("name").withName("usernames").create();
 //			tx.commit();
 //			System.out.println("CREATED INDEX ON USERS IN " + (System.currentTimeMillis() - startTime) + "ms");
 //		}
@@ -677,36 +696,36 @@ public class dataController {
 	/**
 	 * @param graphDB
 	 */
-	public void createIndexesMovieDB(GraphDatabaseService graphDB) {
+	public void createIndexesMovieDB(GraphDatabaseService graphDB, Boolean verbose) {
 		IndexDefinition actorNamesIndex, movieNameIndex, keywordIndex, genreIndex, directorIndex, companyIndex;
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
 			actorNamesIndex = schema.indexFor(Labels.PERSON).on("name").withName("personnames").create();
 			tx.commit();
-			System.out.println("CREATED INDEX ON PERSONS IN " + (System.currentTimeMillis() - startTime) + "ms");
+			if (verbose) System.out.println("CREATED INDEX ON PERSONS IN " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
 			movieNameIndex = schema.indexFor(Labels.MOVIE).on("name").withName("movienames").create();
 			tx.commit();
-			System.out.println("CREATED INDEX ON MOVIES IN " + (System.currentTimeMillis() - startTime) + "ms");
+			if (verbose) System.out.println("CREATED INDEX ON MOVIES IN " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
 			keywordIndex = schema.indexFor(Labels.KEYWORD).on("name").withName("keywordnames").create();
 			tx.commit();
-			System.out.println("CREATED INDEX ON KEYWORDS IN " + (System.currentTimeMillis() - startTime) + "ms");
+			if (verbose) System.out.println("CREATED INDEX ON KEYWORDS IN " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 		startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
 			genreIndex = schema.indexFor(Labels.GENRE).on("name").withName("genrenames").create();
 			tx.commit();
-			tx.close();
-			System.out.println("CREATED INDEX ON GENRES IN " + (System.currentTimeMillis() - startTime) + "ms");
+//			tx.close();
+			if (verbose) System.out.println("CREATED INDEX ON GENRES IN " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 //		startTime = System.currentTimeMillis();
 //		try (Transaction tx = graphDB.beginTx()) {
@@ -721,8 +740,8 @@ public class dataController {
 			Schema schema = tx.schema();
 			companyIndex = schema.indexFor(Labels.PRODUCTION_COMPANY).on("name").withName("companynames").create();
 			tx.commit();
-			tx.close();
-			System.out.println("CREATED INDEX ON COMPANIES IN " + (System.currentTimeMillis() - startTime) + "ms");
+//			tx.close();
+			if (verbose) System.out.println("CREATED INDEX ON COMPANIES IN " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 
 	}
@@ -742,11 +761,12 @@ public class dataController {
 				constraintDefinition.drop();
 			}
 			for (IndexDefinition index : tx.schema().getIndexes()) {
-				if (verbose) System.out.print("\nREMOVING INDEX: " + index.getName());
+				if (verbose)
+					System.out.print("\nREMOVING INDEX: " + index.getName());
 				index.drop();
 			}
 			tx.commit();
-			tx.close();
+//			tx.close();
 		}
 		if (verbose)
 			System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
@@ -896,18 +916,20 @@ public class dataController {
 	 * @param directed   if false (undirected) graph, 2 relations will be created
 	 *                   for each line
 	 */
+	@SuppressWarnings("resource")
 	public void loadEdgeListbyMethods(GraphDatabaseService graphDB, File inputFile, char delimiter, int limit, String identifier, boolean weighted,
-			boolean directed, int periodicCommit) {
-		enums.Labels currentLabel = null;
-		enums.RelationshipTypes currentRelType = null;
+			boolean directed, int periodicCommit, boolean verbose) {
+		Labels currentLabel = null;
+		RelationshipTypes currentRelType = null;
 		if (identifier.equals("cooccs")) {
-			currentLabel = enums.Labels.SINGLE_NODE;
-			currentRelType = enums.RelationshipTypes.IS_CONNECTED;
+			currentLabel = Labels.SINGLE_NODE;
+			currentRelType = RelationshipTypes.IS_CONNECTED;
 		}
 		if (identifier.equals("deezer")) {
-			currentLabel = enums.Labels.USER;
-			currentRelType = enums.RelationshipTypes.IS_FRIEND_OF;
+			currentLabel = Labels.USER;
+			currentRelType = RelationshipTypes.IS_FRIEND_OF;
 		}
+
 		String delimiterString = String.valueOf(delimiter);
 		try {
 			if (limit == 0) {
@@ -918,10 +940,10 @@ public class dataController {
 			}
 
 			// Loading Lines to create nodes
-			System.out.println("LOADING " + lineCountLimit + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
+			if (verbose) System.out.println("LOADING " + lineCountLimit + " ENTRIES FROM FILE " + inputFile.getAbsolutePath());
 			reader = new BufferedReader(new FileReader(inputFile));
 			int count = 0;
-			System.out.println("COLLECTING NODES...");
+			if (verbose) System.out.println("COLLECTING NODES...");
 			long startTime1 = System.currentTimeMillis();
 
 			String nodeLine = reader.readLine();
@@ -941,15 +963,14 @@ public class dataController {
 //			System.out.println("FULL UNIQUE LIST: " + full_node_list_unique.size());
 			int nodeCount = 0;
 			try (Transaction tx = graphDB.beginTx()) {
-				System.out.println("STARTING TRANSACTION...");
+				if (verbose) System.out.println("STARTING TRANSACTION...");
 				for (String nodeName : full_node_list_unique) {
 					nodeCount++;
 					addSingleNode(tx, currentLabel, "name", nodeName, null);
 //					System.out.print("ADDED : " + count + " NODES.\r");
 				}
 				tx.commit();
-				tx.close();
-				System.out.println("ADDED " + nodeCount + " NODES BY METHOD. " + (System.currentTimeMillis() - startTime1) + "ms.");
+				if (verbose) System.out.println("ADDED " + nodeCount + " NODES BY METHOD. " + (System.currentTimeMillis() - startTime1) + "ms.");
 			}
 			// Loading Lines to create relations
 			reader2 = new BufferedReader(new FileReader(inputFile));
@@ -991,7 +1012,7 @@ public class dataController {
 			// WORKAROUND OF MEMALLOC PROB
 
 			int lineCounter = 0;
-			System.out.println("ADDING EDGES...");
+			if (verbose) System.out.println("ADDING EDGES...");
 			long startTime2 = System.currentTimeMillis();
 			Transaction tx = graphDB.beginTx();
 			try {
@@ -999,7 +1020,7 @@ public class dataController {
 				while ((edgeLine != null) & lineCounter < (lineCountLimit)) {
 					if (periodicCommit != 0) {
 						if (lineCounter % periodicCommit == 0) {
-							System.out.println("ADDITIONAL PERIODIC COMMIT AFTER " + periodicCommit);
+							if (verbose) System.out.println("ADDITIONAL PERIODIC COMMIT AFTER " + periodicCommit);
 							tx.commit();
 //							tx.close();
 							tx = graphDB.beginTx();
@@ -1027,38 +1048,40 @@ public class dataController {
 					lineCounter++;
 					edgeLine = reader2.readLine();
 				}
-				tx.commit();
 
-				System.out.println("ADDED " + lineCounter + " LINES BY METHOD. " + (System.currentTimeMillis() - startTime2) + "ms.");
+				if (verbose) System.out.println("ADDED " + lineCounter + " LINES BY METHOD. " + (System.currentTimeMillis() - startTime2) + "ms.");
+
 			} finally {
-				tx.close();
+				tx.commit();
 			}
 			reader2.close();
 
-			System.out.println("# IMPORT VIA METHOD TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
+			if (verbose) System.out.println("# IMPORT VIA METHOD TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 	}
 
-	public void runCooccsImportByMethods(GraphDatabaseService graphDB, File inputfile, boolean verbose, int periodicCommit) {
+	public void runCooccsImportByMethods(GraphDatabaseService graphDB, File inputfile, int periodicCommit, boolean verbose) {
 //		clearDB(graphDB, true);
 //		clearIndexes(graphDB, true);
 //		createIndexes(graphDB, "cooccs", verbose);
-		System.out.println("LOADING COOCCS BY METHODS");
-		loadEdgeListbyMethods(graphDB, inputfile, ',', 0, "cooccs", true, true, periodicCommit);
+		if (verbose) System.out.println("LOADING COOCCS BY METHODS");
+		loadEdgeListbyMethods(graphDB, inputfile, ',', 0, "cooccs", true, true, periodicCommit, verbose);
 	}
 
 	/**
-	 * This method is just creating a given amount nodes with a given label and commits to database instance.
+	 * This method is just creating a given amount nodes with a given label and
+	 * commits to database instance.
 	 * 
-	 * @param amount - give the amount of nodes to be created
+	 * @param amount    - give the amount of nodes to be created
 	 * @param mainLabel - give the initial label for the node to be created
-	 * @param verbose - give more outoput
+	 * @param verbose   - give more outoput
 	 */
 	public void createNodes(int amount, Labels mainLabel, Boolean verbose) {
-		if (amount == 0) amount = 1;
+		if (amount == 0)
+			amount = 1;
 		long startTime = System.currentTimeMillis();
 		try (Transaction tx = graphDB.beginTx()) {
 			long createStart = System.currentTimeMillis();
@@ -1066,28 +1089,29 @@ public class dataController {
 				// Node without label, nearly same speed like for both methods.
 //				Node tmpNode = tx.createNode();
 //				tx.createNode();
-				
+
 				// Node with initial label on creation
 //				Node tmpNode = tx.createNode(mainLabel);
 //				
 				// Node with adding label
 //				Node tmpNode = tx.createNode();
 //				tmpNode.addLabel(mainLabel);
-				
+
 				// Node with adding property
-//				Node tmpNode = tx.createNode();
-//				tmpNode.setProperty("name", i);
-				
-				// Node with adding label and property
 				Node tmpNode = tx.createNode();
-				tmpNode.addLabel(mainLabel);
 				tmpNode.setProperty("name", i);
+
+				// Node with adding label and property
+//				Node tmpNode = tx.createNode();
+//				tmpNode.addLabel(mainLabel);
+//				tmpNode.setProperty("name", i);
 			}
-			
+
 			tx.commit();
 			long endCreate = System.currentTimeMillis();
 			int timeCreate = (int) (endCreate - createStart);
-			if (timeCreate == 0) timeCreate = 1;
+			if (timeCreate == 0)
+				timeCreate = 1;
 			System.out.println(amount + "," + (double) (timeCreate / 1000.0) + "," + (double) ((amount * 1000) / timeCreate));
 		}
 		if (verbose)
@@ -1100,11 +1124,10 @@ public class dataController {
 	 */
 	public void makeCompleteGraph() {
 		int relcounter = 0;
-		int nodeCounter = 0;
 		int i = 0;
 		int j = 0;
 		long createTime = System.currentTimeMillis();
-		ArrayList<Node> nodeList = null;
+		ArrayList<Node> nodeList = new ArrayList<Node>();
 		try (Transaction tx = graphDB.beginTx()) {
 			for (Node tmpNode : tx.getAllNodes()) {
 				nodeList.add(tmpNode);
@@ -1114,8 +1137,10 @@ public class dataController {
 					Node node1 = nodeList.get(i);
 					Node node2 = nodeList.get(j);
 					if (!node2.getProperties("name").equals(node1.getProperty("name"))) {
-						Relationship relationship1 = node1.createRelationshipTo(node2, enums.RelationshipTypes.IS_CONNECTED);
-						Relationship relationship2 = node2.createRelationshipTo(node1, enums.RelationshipTypes.IS_CONNECTED);
+						@SuppressWarnings("unused")
+						Relationship relationship1 = node1.createRelationshipTo(node2, RelationshipTypes.IS_CONNECTED);
+						@SuppressWarnings("unused")
+						Relationship relationship2 = node2.createRelationshipTo(node1, RelationshipTypes.IS_CONNECTED);
 						relcounter = relcounter + 2;
 					}
 				}
@@ -1127,8 +1152,9 @@ public class dataController {
 
 	/**
 	 * Returns the number of nodes in the given graph given by database-instance
+	 * 
 	 * @param graphDB - the database instance
-	 * @return nodeCount - number of nodes 
+	 * @return nodeCount - number of nodes
 	 */
 	public long getNumberOfNodes(GraphDatabaseService graphDB) {
 		long nodeCount = 0;
@@ -1150,5 +1176,93 @@ public class dataController {
 			tx.commit();
 		}
 		System.out.println("EXECUTION TOOK " + (System.currentTimeMillis() - startTimeq1) + " ms.");
+	}
+
+	/**
+	 * Finds nodes for a given degree.
+	 * 
+	 * @param inputDegree
+	 * @param gt
+	 * @param verbose
+	 */
+	public void findNodesDegrees(int inputDegree, Labels label, String propertyName, String propertyValue, DegreeFunctions gt, Boolean verbose) {
+		HashMap<String, Integer> nodeList = new HashMap<String, Integer>();
+		int numberAllNodes = 0;
+		long startTimeq1 = System.currentTimeMillis();
+		switch (gt) {
+			case GT:
+				if (verbose) System.out.println("GETTING ALL NODES WITH GIVEN DEGREE GT " + inputDegree);
+				try (Transaction tx = graphDB.beginTx()) {
+					for (Node node : tx.getAllNodes()) {
+						numberAllNodes++;
+						if (node.getDegree() > inputDegree) {
+							nodeList.put((String) (node.getProperty("name")), node.getDegree());
+						}
+					}
+				}
+				break;
+			case LT:
+				if (verbose) System.out.println("GETTING ALL NODES WITH GIVEN DEGREE LT " + inputDegree);
+				try (Transaction tx = graphDB.beginTx()) {
+					for (Node node : tx.getAllNodes()) {
+						numberAllNodes++;
+						if (node.getDegree() < inputDegree) {
+							nodeList.put((String) (node.getProperty("name")), node.getDegree());
+						}
+					}
+				}
+				break;
+			case EQ:
+				if (verbose) System.out.println("GETTING ALL NODES WITH GIVEN DEGREE EQ " + inputDegree);
+				try (Transaction tx = graphDB.beginTx()) {
+					for (Node node : tx.getAllNodes()) {
+						numberAllNodes++;
+						if (node.getDegree() == inputDegree) {
+							nodeList.put((String) (node.getProperty("name")), node.getDegree());
+						}
+					}
+				}
+				break;	
+			case GE:
+				if (verbose) System.out.println("GETTING ALL NODES WITH GIVEN DEGREE GE " + inputDegree);
+				try (Transaction tx = graphDB.beginTx()) {
+					for (Node node : tx.getAllNodes()) {
+						numberAllNodes++;
+						if (node.getDegree() <= inputDegree) {
+							nodeList.put((String) (node.getProperty("name")), node.getDegree());
+						}
+					}
+				}
+				break;
+			case LE:
+				if (verbose) System.out.println("GETTING ALL NODES WITH GIVEN DEGREE LE " + inputDegree);
+				try (Transaction tx = graphDB.beginTx()) {
+					for (Node node : tx.getAllNodes()) {
+						numberAllNodes++;
+						if (node.getDegree() >= inputDegree) {
+							nodeList.put((String) (node.getProperty("name")), node.getDegree());
+						}
+					}
+				}
+				break;
+			default:
+				if (verbose) System.out.println("GETTING ALL NODES WITH GIVEN DEGREE EQ " + inputDegree);
+				try (Transaction tx = graphDB.beginTx()) {
+					for (Node node : tx.getAllNodes()) {
+						numberAllNodes++;
+						if (node.getDegree() == inputDegree) {
+							nodeList.put((String) (node.getProperty("name")), node.getDegree());
+						}
+					}
+				}
+				break;
+		}
+		
+		if (verbose) {
+				System.out.println(nodeList);
+				System.out.println("NUMBER: " + nodeList.size());
+		}
+		
+		System.out.println("EXECUTION TOOK " + (System.currentTimeMillis() - startTimeq1) + " ms. " + "FOUND " + nodeList.size() + " NODES OUT OF " + numberAllNodes + ".");
 	}
 }

@@ -1,29 +1,14 @@
 package algoPackage;
 
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.neo4j.graphalgo.BasicEvaluationContext;
-import org.neo4j.graphalgo.CostEvaluator;
-import org.neo4j.graphalgo.EstimateEvaluator;
-import org.neo4j.graphalgo.GraphAlgoFactory;
-import org.neo4j.graphalgo.PathFinder;
-import org.neo4j.graphalgo.WeightedPath;
-import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.PathExpanders;
-import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 public class PageRankAnalysis {
 	private static GraphDatabaseService graphDB;
 
-	public PageRankAnalysis(GraphDatabaseService graphDB) {
-		this.graphDB = graphDB;
+	public PageRankAnalysis(GraphDatabaseService inputGraphDB) {
+		graphDB = inputGraphDB;
 	}
 
 	public void listDBfunctions() {
@@ -52,6 +37,7 @@ public class PageRankAnalysis {
 			}
 
 			System.out.println("EXECUTE PAGERANK... ");
+			@SuppressWarnings("unused")
 			Result resultPageRank = tx.execute("CALL gds.pageRank.stream('ACTED_WITH-graph', " + // Graph-Name
 					"{maxIterations: 20, dampingFactor: 0.85}) " + // Configuration
 					"YIELD nodeId, score " + "RETURN gds.util.asNode(nodeId).name AS name, score "
@@ -69,7 +55,7 @@ public class PageRankAnalysis {
 		tx.execute("CALL dbms.setConfigValue('dbms.security.procedures.unrestricted', 'apoc.*,gds.*')");
 		tx.execute("CALL dbms.setConfigValue('dbms.security.procedures.whitelist', 'apoc.*,gds.*')");
 		tx.commit();
-		tx.close();
+//		tx.close();
 		}
 	}
 

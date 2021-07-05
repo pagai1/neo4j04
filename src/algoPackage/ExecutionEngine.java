@@ -25,26 +25,48 @@ public class ExecutionEngine {
 	}
 
 	/**
-	 * Runs a query to the current opened database
+	 * Runs a query to the current opened database.
 	 * 
 	 * @param query          - Inputquery as string
 	 * @param verbose        - print result of query
-	 * @param extraLinebreak - Output-lines receive an extra linebreak, sometimes good for better output.
-	 * 
+	 * @param extraLinebreak - Output-lines receive an extra linebreak, sometimes
+	 *                       good for better output.
+	 * @param extraField     - Which character shall be used instead of linebreak,
+	 *                       works only if extraLinebreak is false
 	 */
 	public void runQuery(String query, Boolean verbose, Boolean extraLinebreak, String extraField) {
 		try (Transaction tx = graphDB.beginTx()) {
 			// QUERY 1
 			long startTimeQuery = System.currentTimeMillis();
-			System.out.println("EXECUTING: \n" + query);
-			Result result = tx.execute(query);
+//			System.out.println("EXECUTING: \n" + query);
+
 //			long startTimeClose = System.currentTimeMillis(); 
 //			tx.close();
 //			System.out.println("CLOSE TOOK: " + (System.currentTimeMillis() - startTimeClose) + "ms.");
+
 			if (verbose) {
-				printResult(result, extraLinebreak, extraField, false);
+				printResult(tx.execute(query), extraLinebreak, extraField, false);
+			} else {
+				Result result = tx.execute(query);
+				result.next();
+//				while (result.hasNext()) {
+//					Map<String, Object> row = result.next();
+//					for (Entry<String, Object> column : row.entrySet()) {
+//						rows += column.getKey() + ": " + column.getValue();
+//					}
+//				}
 			}
-			System.out.println("QUERY FINISHED.");
+
+//			while (result.hasNext()) {
+//				Map<String, Object> row = result.next();
+//				for (Entry<String, Object> column : row.entrySet()) {
+////				System.out.println(column.getKey() + ": " + column.getValue());
+//					rows += column.getKey() + ": " + column.getValue();
+//				}
+//				rows += "\n";
+//			}
+
+//			System.out.println("QUERY FINISHED.");
 			System.out.println("EXECUTION TOOK: " + (System.currentTimeMillis() - startTimeQuery) + "ms.");
 		}
 	}
@@ -82,7 +104,7 @@ public class ExecutionEngine {
 				}
 				rows += "\n";
 			}
-		
+
 		} else {
 			Map<String, Object> row = result.next();
 			for (Entry<String, Object> column : row.entrySet()) {
