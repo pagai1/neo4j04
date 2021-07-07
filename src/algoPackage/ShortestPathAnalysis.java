@@ -30,6 +30,7 @@ public class ShortestPathAnalysis {
 	private static long startTime;
 	private static double startTimeSingle;
 	private static long fullStartTime;
+
 	// Constructor
 	public ShortestPathAnalysis(GraphDatabaseService inputGraphDB) {
 		graphDB = inputGraphDB;
@@ -63,8 +64,7 @@ public class ShortestPathAnalysis {
 			PathFinder<Path> finderShortestPath = GraphAlgoFactory.shortestPath(new BasicEvaluationContext(tx, graphDB),
 					PathExpanders.forTypeAndDirection(relType, Direction.BOTH), 100);
 
-GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
-					PathExpanders.forTypeAndDirection(relType, Direction.BOTH), "bums");
+			GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB), PathExpanders.forTypeAndDirection(relType, Direction.BOTH), "bums");
 			System.out.println("EXECUTED SHORTESTPATH IN " + (System.currentTimeMillis() - startTimeAlgo) + " ms.");
 
 			Path singleShortestPath = finderShortestPath.findSinglePath(startNode, endNode);
@@ -78,28 +78,17 @@ GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
 	 * @param label            - Which label shall have the nodes?
 	 * @param relationShipType - which relationship type shall be used in
 	 *                         pathfinding?
+	 * @param method           - Which algorithm-method shall be taken "regular" or
+	 *                         "dijkstra" possible
 	 * @param verbose          - give output with informations about paths
 	 */
-	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType, boolean verbose) {
+	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType, String method, boolean verbose) {
 		fullStartTime = System.currentTimeMillis();
 		System.out.println("SHORTEST PATH - CREATING PATHFINDERS...");
 		try (Transaction tx = graphDB.beginTx()) {
+			long edgeCount = tx.getAllRelationships().stream().count(); 
 			List<Node> nodeList = new ArrayList<Node>();
-			ResourceIterable<Node> fullNodelist = tx.getAllNodes();
-			Iterator<Node> fullNodeListIterator = fullNodelist.iterator();
-
-//			System.out.println("\nENDNODE: " + endNode.getProperty("name"));
-
-			// shortestPath - Returns an algorithm which can find all shortest paths (that
-			// is paths with as short Path.length() as possible) between two nodes.
-			PathFinder<Path> finderShortestPath = GraphAlgoFactory.shortestPath(new BasicEvaluationContext(tx, graphDB),
-					PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), 50);
-
-			// Returns an algorithm which can find all shortest paths (that is paths with as
-			// short Path.length() as possible) between two nodes.
-			PathFinder<WeightedPath> finderDijkstra = GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
-					PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), "weight");
-
+			Iterator<Node> fullNodeListIterator = tx.getAllNodes().iterator();
 			while (fullNodeListIterator.hasNext()) {
 				Node nodeFromFullList = fullNodeListIterator.next();
 				nodeList.add(nodeFromFullList);
@@ -115,24 +104,48 @@ GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
 //					}
 //				}
 			}
-
 			int nodeCount = nodeList.size();
-			System.out.println("FOUND " + nodeCount + " NODES.");
-			startTime = System.currentTimeMillis();
-			for (int i = 0; i < nodeCount; i++) {
-				Node startNode = nodeList.get(i);
-//				System.out.print("STARTNODE: " + startNode.getProperty("name") + " ");
-//				for (int j = i + 1; j < nodeCount; j++) {
-				for (int j = 0; j < nodeCount; j++) {
-					Node endNode = nodeList.get(j);
-//					System.out.println(endNode.getProperty("name"));
+			if (verbose)
+				System.out.println("FOUND " + nodeCount + " NODES.");
 
-					executeFinderShortestPath(startNode, endNode, finderShortestPath, verbose);
-
-					executeFinderDijkstra(startNode, endNode, finderDijkstra, verbose);
+			if (method == "regular") {
+				PathFinder<Path> finderShortestPath = GraphAlgoFactory.shortestPath(new BasicEvaluationContext(tx, graphDB),
+						PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), 50);
+				startTime = System.currentTimeMillis();
+				for (int i = 0; i < nodeCount; i++) {
+					Node startNode = nodeList.get(i);
+					for (int j = 0; j < nodeCount; j++) {
+						Node endNode = nodeList.get(j);
+						if (endNode != startNode) {
+							executeFinderShortestPath(startNode, endNode, finderShortestPath, verbose);
+						}
+					}
 				}
 			}
-			System.out.println("SHORTEST PATH FOR ALL NODES ENDED IN: " + (System.currentTimeMillis() - startTime) + "ms.");
+
+			if (method == "dijkstra") {
+				PathFinder<WeightedPath> finderDijkstra = GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
+						PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), "weight");
+				startTime = System.currentTimeMillis();
+				for (int i = 0; i < nodeCount; i++) {
+					Node startNode = nodeList.get(i);
+					for (int j = 0; j < nodeCount; j++) {
+						Node endNode = nodeList.get(j);
+						if (endNode != startNode) {
+							executeFinderDijkstra(startNode, endNode, finderDijkstra, verbose);
+						}
+					}
+				}
+			}
+
+			// shortestPath - Returns an algorithm which can find all shortest paths (that
+			// is paths with as short Path.length() as possible) between two nodes.
+
+//			
+			// Returns an algorithm which can find all shortest paths (that is paths with as
+			// short Path.length() as possible) between two nodes.
+
+			System.out.println("ALL SHORTEST PATHS FOR " + nodeCount + " NODES AND " + edgeCount + " EDGES ENDED IN: " + (System.currentTimeMillis() - startTime) + "ms.");
 
 		}
 		System.out.println("FULL RUNTIME: " + (System.currentTimeMillis() - fullStartTime) + "ms.");
