@@ -79,6 +79,7 @@ public class ExecutionEngine {
 	 * @param verbose        - Print out result or not.
 	 * @param extraLinebreak - is there an additional linebreak necessary for the
 	 *                       output? Helpful for multiline-results.
+	 * @param extraField     - no idea anymore :D
 	 */
 	public void exportDBtoFile(String outputFile, Boolean verbose, Boolean extraLinebreak, String extraField) {
 		String query = "CALL apoc.export.csv.all(\"" + outputFile + "\", {})";
