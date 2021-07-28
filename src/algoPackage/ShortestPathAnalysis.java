@@ -96,16 +96,6 @@ public class ShortestPathAnalysis {
 			while (fullNodeListIterator.hasNext()) {
 				Node nodeFromFullList = fullNodeListIterator.next();
 				nodeList.add(nodeFromFullList);
-//				System.out.println("NODE: " + nodeFromFullList.getProperty("name") + "  " + nodeFromFullList.getLabels());
-//				Iterator<Label> labelIterator = nodeFromFullList.getLabels().iterator();
-//				while (labelIterator.hasNext()) {
-//					Label nodeLabel = labelIterator.next();
-//					if (nodeLabel == label) {
-//						nodeList.add(nodeFromFullList);
-//						System.out.println("ADDED : " + nodeFromFullList.getProperty("name"));
-//
-//					}
-//				}
 			}
 			int nodeCount = nodeList.size();
 			if (verbose)
@@ -143,15 +133,17 @@ public class ShortestPathAnalysis {
 
 			if (method == "astar") {
 				startTime = System.currentTimeMillis();
-				// Estimateevaluator pics distance between nodes in 
+				// Estimateevaluator picks distance between nodes in 
+				// Is multiplied by 10000 to have a better weight in calculation. x.y < xxxx.y
 				EstimateEvaluator<Double> estimateEvaluator = new EstimateEvaluator<Double>()
 				{
 				    @Override
 				    public Double getCost( final Node node, final Node goal )
 				    {
-				        double dx = Math.abs((Double) Double.valueOf((String) node.getProperty( "x" )) - (Double) Double.valueOf((String) goal.getProperty( "x" )));
-				        double dy = Math.abs((Double) Double.valueOf((String) node.getProperty( "y" )) - (Double) Double.valueOf((String) goal.getProperty( "y" )));
-				        double result = Math.sqrt(Math.pow(dx,2) + Math.pow(dy,2));
+				        double dx = Math.abs(Double.valueOf((String) node.getProperty( "x" )) - Double.valueOf((String) goal.getProperty( "x" )));
+				        double dy = Math.abs(Double.valueOf((String) node.getProperty( "y" )) - Double.valueOf((String) goal.getProperty( "y" )));
+				        double result = (Math.sqrt(Math.pow(dx,2) + Math.pow(dy,2))* 10000);
+//				        System.out.println("result: " + result);
 				        return result;
 				    }
 				};
