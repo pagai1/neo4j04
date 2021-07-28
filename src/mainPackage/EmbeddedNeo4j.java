@@ -36,7 +36,9 @@ public class EmbeddedNeo4j {
 //	private static final File pluginsFolder = new File("/home/pagai/graph-data/general_db_data/plugins");
 	private static Boolean cleanAndCreate = true;
 	private static Boolean doAlgo = true;
-	private static Boolean mainVerbose = false;
+	private static Boolean mainVerbose = true;
+	private static Boolean doExport = false;
+	
 	// ########################################################
 //	// MOVIEDB
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/owndb01/").toPath();
@@ -45,16 +47,25 @@ public class EmbeddedNeo4j {
 //	private static String identifier = "movie";
 //	private static enums.Labels mainLabel = enums.Labels.PERSON;
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
-//	private static int maxRounds = 1000001;
+//	private static int maxRounds = 10001;
 
 //	EDGELIST
-	private static final Path databaseDirectory = new File("/home/pagai/graph-data/deezerdb/").toPath();
+//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/deezerdb/").toPath();
+////	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
+//	private static final File inputFile = new File("/home/pagai/graph-data/pokec/soc-pokec-relationships_weighted.txt");
+//	private static String identifier = "deezer";
+//	private static Labels mainLabel = Labels.USER;
+//	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
+//	private static int maxRounds = 10001;
+	
+//	GEO
+	private static final Path databaseDirectory = new File("/home/pagai/graph-data/OSRM/").toPath();
 //	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
-	private static final File inputFile = new File("/home/pagai/graph-data/pokec/soc-pokec-relationships_weighted.txt");
-	private static String identifier = "deezer";
-	private static Labels mainLabel = Labels.USER;
-	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
-	private static int maxRounds = 1001;
+	private static final File inputFile = new File("/home/pagai/graph-data/OSRM/final_semicolon.txt");
+	private static String identifier = "geo";
+	private static Labels mainLabel = Labels.PLZ;
+	private static RelationshipTypes mainRelation = RelationshipTypes.HAS_ROAD_TO;
+	private static int maxRounds = 100001;
 
 	// COOCCSDB
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
@@ -64,12 +75,13 @@ public class EmbeddedNeo4j {
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
 
 //	
-//	// COOCCSDB_EXTERNAL
+	// COOCCSDB_EXTERNAL
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
 //	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
 //	private static String identifier = "cooccs";
 //	private static enums.Labels mainLabel = enums.Labels.SINGLE_NODE;
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
+//	private static int maxRounds = 10000;
 
 //	// GENERAL TESTS
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/general_tests/").toPath();
@@ -108,19 +120,14 @@ public class EmbeddedNeo4j {
 		System.out.print("BUILDING DATABASE... " + databaseDirectory + "\n");
 		long buildTime = System.currentTimeMillis();
 		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
-		if (mainVerbose)
-			System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
+		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
 		graphDB = managementService.database("neo4j");
 		registerShutdownHook(managementService);
 		dataController myDataController = new dataController(graphDB);
 
-//		################ COOCCS DATABASE ################
-//		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).build();
-//		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).loadPropertiesFromFile(databaseConfig).build();
 
-//		##################################################
 //		rounds is here taken to use increasing amount of data and make loops to keep it running to test different sizes. Used for example in general tests.
-		for (int round = 1000; round < maxRounds; round = round + 10000) {
+		for (int round = 0; round < maxRounds; round = round + 10000000) {
 //			System.out.println("######## STARTING WITH ROUND: " + rounds);
 			if (mainVerbose)
 				System.out.print("######## STARTING ");
@@ -151,7 +158,7 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("deezer")) {
-					myDataController.runDeezerImportByMethods(inputFile, round, true, true, 0, false);
+					myDataController.runDeezerImportByMethods(inputFile, identifier,",", round, true, true, 0, false);
 //					myDataController.runDeezerImportByCypher(inputFile, 10000, true, true, 0);
 //					myDataController.printAll(graphDB);
 				}
@@ -160,6 +167,12 @@ public class EmbeddedNeo4j {
 					myDataController.runCooccsImportByMethods(graphDB, inputFile, 0, true);
 				}
 
+				if (identifier.equals("geo")) {
+					myDataController.runGeoImportByMethods(inputFile, identifier, "|", 0, true, false, 0, true);
+					
+					
+				}
+				
 				if (identifier.equals("general_tests")) {
 //					myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0);
 //					myDataController.createIndexes(graphDB, identifier, clearAndCreateIndizesVerbose);
@@ -178,12 +191,17 @@ public class EmbeddedNeo4j {
 					}
 
 				}
+			} else {
+				if (mainVerbose) {
+					System.out.println("- JUST OPENING THE DB #########");
+					myDataController.printAll(graphDB, true);
+				}
 			}
-
-			if (doAlgo) {
+			
+			if (doAlgo || doExport) {
 				ExEngine = new ExecutionEngine(graphDB);
 
-				/** 
+				/**
 				 * Find Nodes by Degree
 				 * 
 				 */
@@ -195,8 +213,10 @@ public class EmbeddedNeo4j {
 				 * SHORTEST PATH
 				 */
 
-//				ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
-//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , false);
+				ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
+//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular" , true);
+//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , true);
+				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar" , true);
 
 //				SPAnalysis.getShortestPath(enums.Labels.USER, "5", enums.Labels.USER, "134", enums.RelationshipTypes.IS_FRIEND_OF);
 //				SPAnalysis.getShortestPath(enums.Labels.ACTOR, "Forest Whitaker", enums.Labels.ACTOR, "Miles Teller");
@@ -213,10 +233,10 @@ public class EmbeddedNeo4j {
 				/**
 				 * DEGREE CENTRALITY
 				 */
-				
+
 //				DegreeCentralityAnalysis DCAnalysis= new DegreeCentralityAnalysis(graphDB);
 //				DCAnalysis.getDegreeCentrality(graphDB,true);
-							
+
 				/**
 				 * CYPHERS
 				 */
@@ -255,12 +275,12 @@ public class EmbeddedNeo4j {
 				String createSubGraphEdgelist = "CALL gds.graph.create('SUBGRAPH', \n" + // temporary graph name
 						"  'USER', \n" + // Nodelabel
 						"  'IS_FRIEND_OF')"; // Relation
-				
+
 				@SuppressWarnings("unused")
 				String createSubGraphEdgelistReverseOriented = "CALL gds.graph.create('SUBGRAPH', \n" + // temporary graph name
 						"  'USER', \n" + // Nodelabel
 						"  'IS_FRIEND_OF')"; // Relation
-				
+
 				@SuppressWarnings("unused")
 				String createSubGraphEdgelistWithWeight = "CALL gds.graph.create('SUBGRAPH', \n" + // temporary graph name
 						"  'USER', \n" + // Nodelabel
@@ -278,10 +298,9 @@ public class EmbeddedNeo4j {
 						"  'MATCH (n) RETURN id(n) AS id', \n" + // Nodelabel
 						"  'MATCH (n)-[r]->(m) RETURN id(n) AS source, id(m) AS target, type(r) as type')"; // Relation
 
-				
 				@SuppressWarnings("unused")
 				String removeSubgraphByCypher = "CALL gds.graph.drop('SUBGRAPH')";
-				
+
 				/**
 				 * CALL OF ALGORITHMS ON GRAPHS/SUBGRAPHS
 				 */
@@ -338,13 +357,9 @@ public class EmbeddedNeo4j {
 						+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
 
 				@SuppressWarnings("unused")
-				String degreeCentrality = "CALL gds.alpha.degree.stream(\n" + 
-						" 'SUBGRAPH')\n" 
-						+ "YIELD \n"  
-						+ "  nodeId,score \n"
-						+ "RETURN gds.util.asNode(nodeId).name AS name, score AS followers \n" 
-						+ "ORDER BY followers DESC, name DESC"; 
-				
+				String degreeCentrality = "CALL gds.alpha.degree.stream(\n" + " 'SUBGRAPH')\n" + "YIELD \n" + "  nodeId,score \n"
+						+ "RETURN gds.util.asNode(nodeId).name AS name, score AS followers \n" + "ORDER BY followers DESC, name DESC";
+
 				@SuppressWarnings("unused")
 				String pageRankWeighted = "CALL gds.pageRank.stream('SUBGRAPH') YIELD nodeId, score AS pageRank\n"
 						+ "WITH gds.util.asNode(nodeId) AS n, pageRank\n" + "MATCH (n)-[i:IS_CONNECTED]-()\n"
@@ -363,11 +378,10 @@ public class EmbeddedNeo4j {
 				String get_herr = "MATCH (n:SINGLE_NODE)-[rel:IS_CONNECTED]->(m:SINGLE_NODE) RETURN m.name, count(n)";
 
 				@SuppressWarnings("unused")
-				String JACCARD = "MATCH (n) \n"
-						+ "RETURN gds.alpha.similarity.jaccard([186,123], [123,2732]) AS similarity";
+				String JACCARD = "MATCH (n) \n" + "RETURN gds.alpha.similarity.jaccard([186,123], [123,2732]) AS similarity";
 				////
 
-				/** 
+				/**
 				 * CYPHER EXECUTION
 				 * 
 				 */
@@ -393,7 +407,7 @@ public class EmbeddedNeo4j {
 				/**
 				 * ALGOS
 				 */
-				ExEngine.runQuery(allShortestPaths, true, false, " ");
+//				ExEngine.runQuery(allShortestPaths, true, false, " ");
 //				ExEngine.runQuery(pageRank, true, true);
 
 				//
@@ -407,7 +421,7 @@ public class EmbeddedNeo4j {
 //				ExEngine.runQuery(degreeCentrality, false, false, "|");
 
 //				ExEngine.runQuery(JACCARD, true, false, "|");
-//				ExEngine.exportDBtoFile(outputFile, true, false);
+				if (doExport) ExEngine.exportDBtoFile(outputFile, true, false, "");
 				//
 ////			String endNode = "bums";
 ////			String startNode = "bums";
@@ -415,7 +429,6 @@ public class EmbeddedNeo4j {
 //				ExEngine.runQuery(removeSubgraphByCypher, false, false, " ");
 			}
 		}
-
 
 		managementService.shutdown();
 
