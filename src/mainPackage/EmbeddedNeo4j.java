@@ -36,8 +36,8 @@ public class EmbeddedNeo4j {
 //	private static final File pluginsFolder = new File("/home/pagai/graph-data/general_db_data/plugins");
 	private static Boolean cleanAndCreate = true;
 	private static Boolean doAlgo = true;
-	private static Boolean mainVerbose = true;
-	private static Boolean algoVerbose = false;
+	private static Boolean mainVerbose = false;
+	private static Boolean algoVerbose = true;
 	private static Boolean doExport = false;
 
 	// ########################################################
@@ -66,6 +66,8 @@ public class EmbeddedNeo4j {
 	private static String identifier = "geo";
 	private static Labels mainLabel = Labels.PLZ;
 	private static RelationshipTypes mainRelation = RelationshipTypes.HAS_ROAD_TO;
+	private static String labelString = "PLZ";
+	private static String relationString = "HAS_ROAD_TO";
 	private static int maxRounds = 100001;
 
 	// COOCCSDB
@@ -100,16 +102,16 @@ public class EmbeddedNeo4j {
 	 * apoc-Algorithms via Cypher
 	 **/
 
-	private static Map<String, String> config = MapUtil.stringMap("dbms.tx_log.rotation.retention_policy", "500M size",
-			"dbms.tx_log.rotation.retention_policy", "2 files");
+//	private static Map<String, String> config = MapUtil.stringMap("dbms.tx_log.rotation.retention_policy", "500M size",
+//			"dbms.tx_log.rotation.retention_policy", "2 files");
 
 //	private static Map<String, String> config = MapUtil.stringMap("dbms.security.procedures.unrestricted", "gds.*","dbms.security.procedures.whitelist", "gds.*");
 //	private static Map<String, String> config = MapUtil.stringMap("dbms.security.procedures.unrestricted", "gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*");
 //	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true");
-//	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true", "dbms.security.procedures.unrestricted",
-//			"gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*", "dbms.logs.query.time_logging_enabled", "true",
-//			"dbms.logs.debug.level", "DEBUG", "dbms.tx_log.rotation.retention_policy", "500M size", "dbms.tx_log.rotation.retention_policy",
-//			"2 files");
+	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true", "dbms.security.procedures.unrestricted",
+			"gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*", "dbms.logs.query.time_logging_enabled", "true",
+			"dbms.logs.debug.level", "DEBUG", "dbms.tx_log.rotation.retention_policy", "500M size", "dbms.tx_log.rotation.retention_policy",
+			"2 files");
 
 	private static GraphDatabaseService graphDB;
 	private static DatabaseManagementService managementService;
@@ -190,7 +192,6 @@ public class EmbeddedNeo4j {
 						System.out.println("NODES: " + tx.getAllNodes().stream().count());
 						System.out.println("EDGES: " + tx.getAllRelationships().stream().count());
 					}
-
 				}
 			} else {
 				if (mainVerbose) {
@@ -216,10 +217,10 @@ public class EmbeddedNeo4j {
 				 * SHORTEST PATH
 				 */
 
-				ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
+//				ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
 //				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular" , algoVerbose);
 //				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , algoVerbose);
-				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar", algoVerbose);
+//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar", algoVerbose);
 
 //				SPAnalysis.getShortestPath(enums.Labels.USER, "5", enums.Labels.USER, "134", enums.RelationshipTypes.IS_FRIEND_OF);
 //				SPAnalysis.getShortestPath(enums.Labels.ACTOR, "Forest Whitaker", enums.Labels.ACTOR, "Miles Teller");
@@ -228,10 +229,10 @@ public class EmbeddedNeo4j {
 				/**
 				 * PAGERANK
 				 */
-//				PageRankAnalysis PRAnalysis= new PageRankAnalysis(graphDB);
+				PageRankAnalysis PRAnalysis= new PageRankAnalysis(graphDB);
 //				PRAnalysis.listDBfunctions();
 //				PRAnalysis.setProperties();
-//				PRAnalysis.getPageRank();
+				PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, "weight", false, true, 10);
 
 				/**
 				 * DEGREE CENTRALITY
