@@ -37,8 +37,9 @@ public class EmbeddedNeo4j {
 	private static Boolean cleanAndCreate = true;
 	private static Boolean doAlgo = true;
 	private static Boolean mainVerbose = true;
+	private static Boolean algoVerbose = false;
 	private static Boolean doExport = false;
-	
+
 	// ########################################################
 //	// MOVIEDB
 //	private static final Path databaseDirectory = new File("/home/pagai/graph-data/owndb01/").toPath();
@@ -57,7 +58,7 @@ public class EmbeddedNeo4j {
 //	private static Labels mainLabel = Labels.USER;
 //	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
 //	private static int maxRounds = 10001;
-	
+
 //	GEO
 	private static final Path databaseDirectory = new File("/home/pagai/graph-data/OSRM/").toPath();
 //	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
@@ -99,13 +100,16 @@ public class EmbeddedNeo4j {
 	 * apoc-Algorithms via Cypher
 	 **/
 
+	private static Map<String, String> config = MapUtil.stringMap("dbms.tx_log.rotation.retention_policy", "500M size",
+			"dbms.tx_log.rotation.retention_policy", "2 files");
+
 //	private static Map<String, String> config = MapUtil.stringMap("dbms.security.procedures.unrestricted", "gds.*","dbms.security.procedures.whitelist", "gds.*");
 //	private static Map<String, String> config = MapUtil.stringMap("dbms.security.procedures.unrestricted", "gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*");
 //	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true");
-	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true", "dbms.security.procedures.unrestricted",
-			"gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*", "dbms.logs.query.time_logging_enabled", "true",
-			"dbms.logs.debug.level", "DEBUG", "dbms.tx_log.rotation.retention_policy", "500M size", "dbms.tx_log.rotation.retention_policy",
-			"2 files");
+//	private static Map<String, String> config = MapUtil.stringMap("apoc.export.file.enabled", "true", "dbms.security.procedures.unrestricted",
+//			"gds.*,apoc.*", "dbms.security.procedures.whitelist", "gds.*,apoc.*", "dbms.logs.query.time_logging_enabled", "true",
+//			"dbms.logs.debug.level", "DEBUG", "dbms.tx_log.rotation.retention_policy", "500M size", "dbms.tx_log.rotation.retention_policy",
+//			"2 files");
 
 	private static GraphDatabaseService graphDB;
 	private static DatabaseManagementService managementService;
@@ -125,11 +129,10 @@ public class EmbeddedNeo4j {
 		registerShutdownHook(managementService);
 		dataController myDataController = new dataController(graphDB);
 
-
 //		rounds is here taken to use increasing amount of data and make loops to keep it running to test different sizes. Used for example in general tests.
-		for (int round = 0; round < maxRounds; round = round + 10000000) {
-//			System.out.println("######## STARTING WITH ROUND: " + rounds);
+		for (int round = 0; round < 11; round = round + 111) {
 			if (mainVerbose)
+				System.out.println("######## STARTING WITH ROUND: " + round);
 				System.out.print("######## STARTING ");
 
 			@SuppressWarnings("unused")
@@ -158,7 +161,7 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("deezer")) {
-					myDataController.runDeezerImportByMethods(inputFile, identifier,",", round, true, true, 0, false);
+					myDataController.runDeezerImportByMethods(inputFile, identifier, ",", round, true, true, 0, false);
 //					myDataController.runDeezerImportByCypher(inputFile, 10000, true, true, 0);
 //					myDataController.printAll(graphDB);
 				}
@@ -168,11 +171,9 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("geo")) {
-					myDataController.runGeoImportByMethods(inputFile, identifier, "|", 0, true, false, 0, true);
-					
-					
+					myDataController.runGeoImportByMethods(inputFile, identifier, "|", 0, true, true, 0, true);
 				}
-				
+
 				if (identifier.equals("general_tests")) {
 //					myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0);
 //					myDataController.createIndexes(graphDB, identifier, clearAndCreateIndizesVerbose);
@@ -197,8 +198,10 @@ public class EmbeddedNeo4j {
 					myDataController.printAll(graphDB, true);
 				}
 			}
-			
+
 			if (doAlgo || doExport) {
+				if (mainVerbose)
+					System.out.println("######### STARTING ALGO OR EXPORT STUFF #########");
 				ExEngine = new ExecutionEngine(graphDB);
 
 				/**
@@ -214,9 +217,9 @@ public class EmbeddedNeo4j {
 				 */
 
 				ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
-//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular" , true);
-//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , true);
-				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar" , true);
+//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular" , algoVerbose);
+//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , algoVerbose);
+				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar", algoVerbose);
 
 //				SPAnalysis.getShortestPath(enums.Labels.USER, "5", enums.Labels.USER, "134", enums.RelationshipTypes.IS_FRIEND_OF);
 //				SPAnalysis.getShortestPath(enums.Labels.ACTOR, "Forest Whitaker", enums.Labels.ACTOR, "Miles Teller");
@@ -421,7 +424,8 @@ public class EmbeddedNeo4j {
 //				ExEngine.runQuery(degreeCentrality, false, false, "|");
 
 //				ExEngine.runQuery(JACCARD, true, false, "|");
-				if (doExport) ExEngine.exportDBtoFile(outputFile, true, false, "");
+				if (doExport)
+					ExEngine.exportDBtoFile(outputFile, true, false, "");
 				//
 ////			String endNode = "bums";
 ////			String startNode = "bums";

@@ -85,14 +85,14 @@ public class dataController {
 	 * @param directed       if false, for each line 2 relations will be created
 	 * @param periodicCommit Periodic commit after a given number of transactions.
 	 */
-	public void runGeoImportByMethods(File inputFile, String identifier, String delimiter, int limit, boolean weighted, boolean directed, int periodicCommit,
-			boolean verbose) {
+	public void runGeoImportByMethods(File inputFile, String identifier, String delimiter, int limit, boolean weighted, boolean directed,
+			int periodicCommit, boolean verbose) {
 		int count = 0;
 		Labels currentLabel = null;
 		RelationshipTypes currentRelType = null;
 		if (verbose)
 			System.out.println("LOADING GEODATA BY METHODS");
-		
+
 		if (identifier.equals("geo")) {
 			currentLabel = Labels.PLZ;
 			currentRelType = RelationshipTypes.HAS_ROAD_TO;
@@ -132,16 +132,12 @@ public class dataController {
 				if (verbose)
 					System.out.println("STARTING TRANSACTION...");
 				for (String nodeName : full_node_list_unique) {
-					System.out.println("ADDING : " + nodeName);
-					System.out.println("THE TX : " + tx.getClass());
 					nodeCount++;
-					System.out.println("NODECOUNT: " + nodeCount);
 					addSingleNode(tx, currentLabel, "plz", nodeName, null);
-					System.out.print("ADDED : " + count + " NODES.\r");
 				}
 				tx.commit();
 				if (verbose)
-					System.out.println("ADDED " + nodeCount + " NODES BY METHOD. " + (System.currentTimeMillis() - startTime1) + "ms.");
+					System.out.println("ADDED : " + nodeCount + " NODES BY METHOD. " + (System.currentTimeMillis() - startTime1) + "ms.");
 			}
 			// Loading Lines to create relations
 			reader2 = new BufferedReader(new FileReader(inputFile));
@@ -165,11 +161,9 @@ public class dataController {
 					secondNode.setProperty("name", edgeLine.split(";")[6]);
 					secondNode.setProperty("x", edgeLine.split(";")[7]);
 					secondNode.setProperty("y", edgeLine.split(";")[8]);
-					System.out.println("YAAAAAY! : " + edgeLine);
 					@SuppressWarnings("unused")
 					Relationship relationship1 = firstNode.createRelationshipTo(secondNode, currentRelType);
 					if (weighted) {
-						System.out.println(edgeLine.split(";")[4]);
 						int weight = Integer.parseInt(edgeLine.split(";")[4]);
 						relationship1.setProperty("weight", weight);
 					}
@@ -186,8 +180,7 @@ public class dataController {
 				}
 
 				if (verbose)
-					System.out.println("ADDED " + lineCounter + " LINES BY METHOD. " + (System.currentTimeMillis() - startTime2) + "ms.");
-
+					System.out.println("ADDED : " + lineCounter + " EDGES BY METHOD. " + (System.currentTimeMillis() - startTime2) + "ms.");
 			} finally {
 				tx.commit();
 			}
@@ -615,13 +608,8 @@ public class dataController {
 	 * @param nodeName
 	 */
 	private void addSingleNode(Transaction tx, enums.Labels label, String nameProperty, String nodeName, HashMap<String, Boolean> properties) {
-//		System.out.println("ADDING " + label.toString() + " " + nodeName);
-		System.out.println("IM HERE!");
-		
 		Node node = tx.createNode(label);
-		System.out.println("NODE CREATED");
 		node.setProperty(nameProperty, nodeName);
-		System.out.println("PROP SET:" + nameProperty + " : " + nodeName );
 		if (properties != null) {
 			Iterator<?> propertyIterator = properties.entrySet().iterator();
 			while (propertyIterator.hasNext()) {
@@ -1074,10 +1062,6 @@ public class dataController {
 		if (identifier.equals("deezer")) {
 			currentLabel = Labels.USER;
 			currentRelType = RelationshipTypes.IS_FRIEND_OF;
-		}
-		if (identifier.equals("geo")) {
-			currentLabel = Labels.PLZ;
-			currentRelType = RelationshipTypes.HAS_ROAD_TO;
 		}
 
 		String delimiterString = String.valueOf(delimiter);

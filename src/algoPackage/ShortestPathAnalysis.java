@@ -87,11 +87,12 @@ public class ShortestPathAnalysis {
 	 */
 	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType, String method, boolean verbose) {
 		fullStartTime = System.currentTimeMillis();
-		if (verbose) System.out.println("SHORTEST PATH - CREATING PATHFINDERS...");
+		if (verbose)
+			System.out.println("SHORTEST PATH - " + method + " - CREATING PATHFINDERS...");
 		try (Transaction tx = graphDB.beginTx()) {
-			long edgeCount = tx.getAllRelationships().stream().count(); 
+			long edgeCount = tx.getAllRelationships().stream().count();
 			List<Node> nodeList = new ArrayList<Node>();
-		
+
 			Iterator<Node> fullNodeListIterator = tx.findNodes(label).stream().iterator();
 			while (fullNodeListIterator.hasNext()) {
 				Node nodeFromFullList = fullNodeListIterator.next();
@@ -133,22 +134,21 @@ public class ShortestPathAnalysis {
 
 			if (method == "astar") {
 				startTime = System.currentTimeMillis();
-				// Estimateevaluator picks distance between nodes in 
+				// Estimateevaluator picks distance between nodes in
 				// Is multiplied by 10000 to have a better weight in calculation. x.y < xxxx.y
-				EstimateEvaluator<Double> estimateEvaluator = new EstimateEvaluator<Double>()
-				{
-				    @Override
-				    public Double getCost( final Node node, final Node goal )
-				    {
-				        double dx = Math.abs(Double.valueOf((String) node.getProperty( "x" )) - Double.valueOf((String) goal.getProperty( "x" )));
-				        double dy = Math.abs(Double.valueOf((String) node.getProperty( "y" )) - Double.valueOf((String) goal.getProperty( "y" )));
-				        double result = (Math.sqrt(Math.pow(dx,2) + Math.pow(dy,2))* 10000);
-//				        System.out.println("result: " + result);
-				        return result;
-				    }
+				EstimateEvaluator<Double> estimateEvaluator = new EstimateEvaluator<Double>() {
+					@Override
+					public Double getCost(final Node node, final Node goal) {
+						double dx = Math.abs(Double.valueOf((String) node.getProperty("x")) - Double.valueOf((String) goal.getProperty("x")));
+						double dy = Math.abs(Double.valueOf((String) node.getProperty("y")) - Double.valueOf((String) goal.getProperty("y")));
+						double result = (Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2)) * 10000);
+						return result;
+					}
 				};
-				
-				PathFinder<WeightedPath> finderAStar = GraphAlgoFactory.aStar(new BasicEvaluationContext(tx, graphDB), PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), CommonEvaluators.doubleCostEvaluator( "weight" ), estimateEvaluator);
+
+				PathFinder<WeightedPath> finderAStar = GraphAlgoFactory.aStar(new BasicEvaluationContext(tx, graphDB),
+						PathExpanders.forTypeAndDirection(relationShipType, Direction.OUTGOING), CommonEvaluators.doubleCostEvaluator("weight"),
+						estimateEvaluator);
 				for (int i = 0; i < nodeCount; i++) {
 					Node startNode = nodeList.get(i);
 					for (int j = 0; j < nodeCount; j++) {
@@ -159,24 +159,29 @@ public class ShortestPathAnalysis {
 					}
 				}
 			}
-			
+
 			// shortestPath - Returns an algorithm which can find all shortest paths (that
 			// is paths with as short Path.length() as possible) between two nodes.
 
 			// Returns an algorithm which can find all shortest paths (that is paths with as
 			// short Path.length() as possible) between two nodes.
 
-			System.out.println("ALL SHORTEST PATHS FOR " + nodeCount + " NODES AND " + edgeCount + " EDGES ENDED IN: " + (System.currentTimeMillis() - startTime) + "ms.");
+			System.out.println("ALL SHORTEST PATHS FOR " + nodeCount + " NODES AND " + edgeCount + " EDGES ENDED IN: "
+					+ (System.currentTimeMillis() - startTime) + "ms.");
 
 		}
-		if (verbose) System.out.println("FULL RUNTIME: " + (System.currentTimeMillis() - fullStartTime) + "ms.");
+		if (verbose)
+			System.out.println("FULL RUNTIME: " + (System.currentTimeMillis() - fullStartTime) + "ms.");
 	}
 
 	/**
-	 * Finds the shortest path using default a*Star finder.
-	 * @param startNode
-	 * @param endNode
-	 * @param finderShortestPath
+	 * Finds the shortest path using default aStar (A*) finder.
+	 * 
+	 * @param startNode          startnode of path
+	 * @param endNode            targetnode of path
+	 * @param finderShortestPath the finder-instance
+	 * @param verbose            if true, method prints all paths with
+	 *                           calculationtime for each path
 	 */
 	public void executeFinderAStar(Node startNode, Node endNode, PathFinder<WeightedPath> finderAStar, boolean verbose) {
 		startTimeSingle = System.nanoTime();
@@ -197,9 +202,10 @@ public class ShortestPathAnalysis {
 //		}
 
 	}
-	
+
 	/**
 	 * Finds the shortest path using default shortestPath finder.
+	 * 
 	 * @param startNode
 	 * @param endNode
 	 * @param finderShortestPath
@@ -244,8 +250,9 @@ public class ShortestPathAnalysis {
 
 	/**
 	 * Finds the shortest path using default dijkstraFinder.
-	 * @param startNode - the startnode of the path
-	 * @param endNode - the endnode of the path
+	 * 
+	 * @param startNode      - the startnode of the path
+	 * @param endNode        - the endnode of the path
 	 * @param finderDijkstra - the finderalgorithm
 	 */
 	public void executeFinderDijkstra(Node startNode, Node endNode, PathFinder<WeightedPath> finderDijkstra, Boolean verbose) {
