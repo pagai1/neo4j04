@@ -11,7 +11,7 @@ import org.neo4j.graphdb.Transaction;
 public class ExecutionEngine {
 
 	private static GraphDatabaseService graphDB;
-	private String rows;
+	private String rows = "";
 
 	// Constructor
 	/**
@@ -88,8 +88,10 @@ public class ExecutionEngine {
 
 	/**
 	 * Prints out the result.
-	 * 
-	 * @param result
+	 * @param result - the result parameter
+	 * @param extraLinebreak - shall there be an extra line break
+	 * @param extraField - if extra line break, which string shall be inserted. default = \n.
+	 * @param onlySingle - if true only one outputline will be in the output.
 	 */
 	private void printResult(Result result, boolean extraLinebreak, String extraField, boolean onlySingle) {
 		String eLb = extraField;
