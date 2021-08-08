@@ -30,65 +30,69 @@ public class EmbeddedNeo4j {
 	 * necessary
 	 */
 
-//	private static final String databaseConfig = "/home/pagai/graph-data/general_db_data/conf/neo4j.conf";
-//	private static final File inputFolder = new File("/home/pagai/graph-data/");
+//	private static final String databaseConfig = homeDir + "/graph-data/general_db_data/conf/neo4j.conf";
+//	private static final File inputFolder = new File(homeDir + "/graph-data/");
 //	private static final File importFolder = new File("/var/lib/neo4j/import/");
-//	private static final File pluginsFolder = new File("/home/pagai/graph-data/general_db_data/plugins");
+//	private static final File pluginsFolder = new File(homeDir + "/graph-data/general_db_data/plugins");
+	
+	private static final String homeDir = System.getProperty("user.home");
+	
 	private static Boolean cleanAndCreate = true;
 	private static Boolean doAlgo = true;
 	private static Boolean mainVerbose = false;
-	private static Boolean algoVerbose = true;
+	private static Boolean algoVerbose = false;
 	private static Boolean doExport = false;
 
 	// ########################################################
 //	// MOVIEDB
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/owndb01/").toPath();
-////	private static final File inputFile = new File("/home/pagai/graph-data/tmdb.csv");
-//	private static final File inputFile = new File("/home/pagai/graph-data/tmdb_fixed.csv");
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
+////	private static final File inputFile = new File(homeDir + "/graph-data/tmdb.csv");
+//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
 //	private static String identifier = "movie";
 //	private static enums.Labels mainLabel = enums.Labels.PERSON;
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
 //	private static int maxRounds = 10001;
 
 //	EDGELIST
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/deezerdb/").toPath();
-////	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
-//	private static final File inputFile = new File("/home/pagai/graph-data/pokec/soc-pokec-relationships_weighted.txt");
-//	private static String identifier = "deezer";
-//	private static Labels mainLabel = Labels.USER;
-//	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
-//	private static int maxRounds = 10001;
+	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
+//	private static final File inputFile = new File(homeDir + "/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
+	private static final File inputFile = new File(homeDir + "/graph-data/pokec/soc-pokec-relationships_weighted.txt");
+	private static String identifier = "deezer";
+	private static Labels mainLabel = Labels.USER;
+	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
+	private static String labelString = "USER";
+	private static String relationString = "IS_FRIEND_OF";
+	private static int maxRounds = 10001;
 
 //	GEO
-	private static final Path databaseDirectory = new File("/home/pagai/graph-data/OSRM/").toPath();
-//	private static final File inputFile = new File("/home/pagai/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
-	private static final File inputFile = new File("/home/pagai/graph-data/OSRM/final_semicolon.txt");
-	private static String identifier = "geo";
-	private static Labels mainLabel = Labels.PLZ;
-	private static RelationshipTypes mainRelation = RelationshipTypes.HAS_ROAD_TO;
-	private static String labelString = "PLZ";
-	private static String relationString = "HAS_ROAD_TO";
-	private static int maxRounds = 100001;
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/OSRM/").toPath();
+//	private static final File inputFile = new File(homeDir + "/graph-data/OSRM/final_semicolon.txt");
+//	private static String identifier = "geo";
+//	private static Labels mainLabel = Labels.PLZ;
+//	private static RelationshipTypes mainRelation = RelationshipTypes.HAS_ROAD_TO;
+//	private static String labelString = "PLZ";
+//	private static String relationString = "HAS_ROAD_TO";
+//	private static int maxRounds = 25;
 
 	// COOCCSDB
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
-//	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
+//	private static final File inputFile = new File(homeDir + "/graph-data/cooccs.csv");
 //	private static String identifier = "cooccs";
 //	private static enums.Labels mainLabel = enums.Labels.SINGLE_NODE;
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
 
 //	
 	// COOCCSDB_EXTERNAL
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/cooccsdatabase/").toPath();
-//	private static final File inputFile = new File("/home/pagai/graph-data/cooccs.csv");
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
+//	private static final File inputFile = new File(homeDir + "/graph-data/cooccs.csv");
 //	private static String identifier = "cooccs";
 //	private static enums.Labels mainLabel = enums.Labels.SINGLE_NODE;
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
 //	private static int maxRounds = 10000;
 
 //	// GENERAL TESTS
-//	private static final Path databaseDirectory = new File("/home/pagai/graph-data/general_tests/").toPath();
-//	private static final File inputFile = new File("/home/pagai/graph-data/general_tests.csv");
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/general_tests/").toPath();
+//	private static final File inputFile = new File(homeDir + "/graph-data/general_tests.csv");
 //	private static String identifier = "general_tests";
 //	private static enums.Labels mainLabel = Labels.SINGLE_NODE;
 //	private static enums.RelationshipTypes mainRelation = RelationshipTypes.IS_CONNECTED;
@@ -132,7 +136,7 @@ public class EmbeddedNeo4j {
 		dataController myDataController = new dataController(graphDB);
 
 //		rounds is here taken to use increasing amount of data and make loops to keep it running to test different sizes. Used for example in general tests.
-		for (int round = 0; round < 11; round = round + 111) {
+		for (int round = 25000; round < 5000001; round = round + 25000) {
 			if (mainVerbose)
 				System.out.println("######## STARTING WITH ROUND: " + round);
 				System.out.print("######## STARTING ");
@@ -141,14 +145,13 @@ public class EmbeddedNeo4j {
 			int lineLimit = 0;
 			Boolean createIndizes = true;
 			if (cleanAndCreate) {
-				if (mainVerbose) {
 					if (createIndizes) {
 						System.out.println("WITH INDIZES #########");
 					} else {
 						System.out.println("WITHOUT INDIZES #########");
 					}
-				}
-				Boolean clearAndCreateIndizesVerbose = false;
+				
+				Boolean clearAndCreateIndizesVerbose = true;
 				myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0);
 				myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
 //				myDataController.clearDBByCypher(graphDB, clearAndCreateIndizesVerbose);
@@ -163,12 +166,13 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("deezer")) {
-					myDataController.runDeezerImportByMethods(inputFile, identifier, ",", round, true, true, 0, false);
+					myDataController.runDeezerImportByMethods(inputFile, identifier, "," , round, true, true, 10000, false);
 //					myDataController.runDeezerImportByCypher(inputFile, 10000, true, true, 0);
 //					myDataController.printAll(graphDB);
 				}
 
 				if (identifier.equals("cooccs")) {
+					// this is normally not needed, or exeucted, as the DB will be imported from the NLP-toolbox-creation. :D
 					myDataController.runCooccsImportByMethods(graphDB, inputFile, 0, true);
 				}
 
@@ -185,7 +189,7 @@ public class EmbeddedNeo4j {
 //					myDataController.makeCompleteGraph();
 //					myDataController.printAll(graphDB);
 				}
-				if (mainVerbose) {
+				if (cleanAndCreate || mainVerbose) {
 					System.out.println("FINISHED IMPORT AFTER " + (System.currentTimeMillis() - startTime2) + "ms.");
 					try (Transaction tx = graphDB.beginTx()) {
 						System.out.println("########### DATABASE CONTENT ##########");
@@ -194,8 +198,8 @@ public class EmbeddedNeo4j {
 					}
 				}
 			} else {
+				System.out.println("- JUST OPENING THE DB #########");
 				if (mainVerbose) {
-					System.out.println("- JUST OPENING THE DB #########");
 					myDataController.printAll(graphDB, true);
 				}
 			}
@@ -230,10 +234,21 @@ public class EmbeddedNeo4j {
 				 * PAGERANK
 				 */
 				PageRankAnalysis PRAnalysis= new PageRankAnalysis(graphDB);
-//				PRAnalysis.listDBfunctions();
-//				PRAnalysis.setProperties();
-				PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, "weight", false, true, 10);
-
+				// weightstring is used to create subgraph with property on relation
+				// also it is used to call pagerank with use attribute in calculation.
+				String weightString = null;
+				if (identifier.equals("cooccs")) {
+					weightString = "count";
+				}
+				if (identifier.equals("deezer")) {
+					weightString = "weight";
+				}
+				if (identifier.equals("geo")) {
+					weightString = "weight";
+				}
+//				algoVerbose = false;
+				PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, weightString, false, false, 0);
+				
 				/**
 				 * DEGREE CENTRALITY
 				 */
@@ -418,7 +433,7 @@ public class EmbeddedNeo4j {
 ////			ExEngine.runQuery(betweenness, true, false);
 //				ExEngine.runQuery(pageRankAll, true, false);
 
-//				ExEngine.runQuery(pageRankWeighted, true, false);
+//				ExEngine.runQuery(pageRankWeighted, true, false, "|");
 ////			ExEngine.runQuery(get_herr, true, true);
 //				ExEngine.runQuery(hits, true, false, " ");
 //				ExEngine.runQuery(simRank, true, false, "|");
