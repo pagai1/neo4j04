@@ -6,9 +6,9 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
 import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.lang.System;
@@ -205,7 +205,7 @@ public class dataController {
 	 * @param directed       if false, for each line 2 relations will be created
 	 * @param periodicCommit Periodic commit after a given number of transactions.
 	 */
-	public void runDeezerImportByMethods(File inputFile, String delimiter, String identifier, int limit, boolean weighted, boolean directed,
+	public void runDeezerImportByMethods(File inputFile, String identifier, String delimiter, int limit, boolean weighted, boolean directed,
 			int periodicCommit, boolean verbose) {
 		if (verbose)
 			System.out.println("LOADING EDGELIST BY METHODS");
@@ -706,6 +706,24 @@ public class dataController {
 //			createIndexesByCypherGeneralTests(graphDB);
 			createIndexesGeneralTests(graphDB, verbose);
 		}
+		if (identifier.equals("geo")) {
+			createIndexesGeoDB(graphDB, verbose);
+		}
+	}
+
+	private void createIndexesGeoDB(GraphDatabaseService graphDB, boolean verbose) {
+		@SuppressWarnings("unused")
+		IndexDefinition userIndex;
+		startTime = System.currentTimeMillis();
+		try (Transaction tx = graphDB.beginTx()) {
+			Schema schema = tx.schema();
+			userIndex = schema.indexFor(Labels.PLZ).on("plz").withName("nodenames").create();
+			tx.commit();
+			if (verbose)
+				System.out.println("CREATED INDEX ON PLZ IN " + (System.currentTimeMillis() - startTime) + "ms");
+		} catch (Exception e) {
+			System.out.println("There was already an index.");
+		}
 	}
 
 	private void createIndexesGeneralTests(GraphDatabaseService graphDB, boolean verbose) {
@@ -899,6 +917,7 @@ public class dataController {
 					System.out.print("\nREMOVING INDEX: " + index.getName());
 				index.drop();
 			}
+			System.out.println("INDEX DROPPED.");
 			tx.commit();
 //			tx.close();
 		}
@@ -1058,6 +1077,7 @@ public class dataController {
 		if (identifier.equals("cooccs")) {
 			currentLabel = Labels.SINGLE_NODE;
 			currentRelType = RelationshipTypes.IS_CONNECTED;
+
 		}
 		if (identifier.equals("deezer")) {
 			currentLabel = Labels.USER;
@@ -1206,9 +1226,6 @@ public class dataController {
 	}
 
 	public void runCooccsImportByMethods(GraphDatabaseService graphDB, File inputfile, int periodicCommit, boolean verbose) {
-//		clearDB(graphDB, true);
-//		clearIndexes(graphDB, true);
-//		createIndexes(graphDB, "cooccs", verbose);
 		if (verbose)
 			System.out.println("LOADING COOCCS BY METHODS");
 		loadEdgeListbyMethods(graphDB, inputfile, ",", 0, "cooccs", true, true, periodicCommit, verbose);
