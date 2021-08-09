@@ -65,9 +65,7 @@ public class PageRankAnalysis {
 	public void createSubgraphAndExecutePageRank(String graphName, String mainLabel, String mainRelationship, String relationshipProperty,
 			Boolean listConfig, Boolean verbose, int maxLineOutput) {
 //		warmUp(graphDB);
-		
-
-		
+				
 		Result result;
 		String limitLines = "";
 		String relProps = "";
@@ -80,6 +78,8 @@ public class PageRankAnalysis {
 			limitLines = "LIMIT " + maxLineOutput;
 		}
 		
+		long start_time = System.currentTimeMillis();
+
 		try (Transaction tx = graphDB.beginTx()) {
 			if (verbose) {
 				System.out.println("CREATE TEMPORARY SUBGRAPH...");
@@ -96,14 +96,13 @@ public class PageRankAnalysis {
 			}
 			tx.close();
 		}
-
-		
 		
 //			Result resultCreation = tx.execute("CALL gds.graph.create(" + "  '" + graphName + "'," + "  '" + mainLabel + "'," + "  '"
 //					+ mainRelationship + "'" + relProps + ") YIELD createMillis;");
 //			while (resultCreation.hasNext()) {
 //				System.out.println(resultCreation.next().toString());
 //			}
+		
 		if (listConfig) {
 			try (Transaction tx = graphDB.beginTx()) {
 				String listConfigQuery = "CALL gds.graph.list( '" + graphName + "')\n"
@@ -125,8 +124,6 @@ public class PageRankAnalysis {
 //				}
 		}
 		
-		long start_time = System.currentTimeMillis();
-
 		String query = "CALL gds.pageRank.stream('" + graphName + "', " + // Graph-Name
 				"{ " + relWeightProp + " maxIterations: 100, dampingFactor: 0.85, concurrency: 1 }) " + // Configuration
 				"YIELD nodeId, score " + "RETURN gds.util.asNode(nodeId).name AS name, score " + "ORDER BY score DESC " + limitLines;
@@ -135,6 +132,8 @@ public class PageRankAnalysis {
 			System.out.println("EXECUTE PAGERANK... ");
 			System.out.println(query);
 		}
+		long start_time_pure_algo = System.currentTimeMillis();
+
 		try (Transaction tx = graphDB.beginTx()) {
 			if (verbose) {
 				printResult(tx.execute(query), false, "|", false);
@@ -144,9 +143,8 @@ public class PageRankAnalysis {
 			}
 			tx.close();
 		}
-			
-		System.out.println("EXECUTION TOOK: " + (System.currentTimeMillis() - start_time) + "ms.");
-		
+		long end_time_pure_algo = System.currentTimeMillis() - start_time_pure_algo;
+				
 		if (verbose) System.out.println("DROPPING SUBGRAPH");
 		try (Transaction tx = graphDB.beginTx()) {
 			result = tx.execute("CALL gds.graph.drop('SUBGRAPH')");
@@ -155,6 +153,8 @@ public class PageRankAnalysis {
 		} catch(Exception e) {
 			System.out.println(e.getCause());
 		}
+
+		System.out.println("PAGERANK EXECUTION TOOK: " + (System.currentTimeMillis() - start_time) + " ALGOTIME: " + end_time_pure_algo );
 	}
 
 	/**

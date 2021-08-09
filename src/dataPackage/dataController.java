@@ -8,7 +8,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.lang.System;
@@ -17,6 +18,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterable;
+import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
@@ -116,9 +118,9 @@ public class dataController {
 			reader = new BufferedReader(new FileReader(inputFile));
 			String nodeLine = reader.readLine();
 			while (nodeLine != null & count < (lineCountLimit)) {
-				String node1 = nodeLine.split(";")[0];
+				String node1 = nodeLine.split(delimiter)[0];
 				full_node_list.add(node1);
-				String node2 = nodeLine.split(";")[5];
+				String node2 = nodeLine.split(delimiter)[5];
 				full_node_list.add(node2);
 				// go to the next line
 				count++;
@@ -151,27 +153,27 @@ public class dataController {
 				String edgeLine = reader2.readLine();
 				while ((edgeLine != null) & lineCounter < (lineCountLimit)) {
 
-					String nodeName1 = edgeLine.split(";")[0];
-					String nodeName2 = edgeLine.split(";")[5];
+					String nodeName1 = edgeLine.split(delimiter)[0];
+					String nodeName2 = edgeLine.split(delimiter)[5];
 					Node firstNode = tx.findNode(currentLabel, "plz", nodeName1);
 					Node secondNode = tx.findNode(currentLabel, "plz", nodeName2);
-					firstNode.setProperty("name", edgeLine.split(";")[1]);
-					firstNode.setProperty("x", edgeLine.split(";")[2]);
-					firstNode.setProperty("y", edgeLine.split(";")[3]);
-					secondNode.setProperty("name", edgeLine.split(";")[6]);
-					secondNode.setProperty("x", edgeLine.split(";")[7]);
-					secondNode.setProperty("y", edgeLine.split(";")[8]);
+					firstNode.setProperty("name", edgeLine.split(delimiter)[1]);
+					firstNode.setProperty("x", edgeLine.split(delimiter)[2]);
+					firstNode.setProperty("y", edgeLine.split(delimiter)[3]);
+					secondNode.setProperty("name", edgeLine.split(delimiter)[6]);
+					secondNode.setProperty("x", edgeLine.split(delimiter)[7]);
+					secondNode.setProperty("y", edgeLine.split(delimiter)[8]);
 					@SuppressWarnings("unused")
 					Relationship relationship1 = firstNode.createRelationshipTo(secondNode, currentRelType);
 					if (weighted) {
-						int weight = Integer.parseInt(edgeLine.split(";")[4]);
+						int weight = Integer.parseInt(edgeLine.split(delimiter)[4]);
 						relationship1.setProperty("weight", weight);
 					}
 					if (!directed) {
 						@SuppressWarnings("unused")
 						Relationship relationship2 = secondNode.createRelationshipTo(firstNode, currentRelType);
 						if (weighted) {
-							String weight = edgeLine.split(";")[4];
+							String weight = edgeLine.split(delimiter)[4];
 							relationship2.setProperty("weight", weight);
 						}
 					}
@@ -261,7 +263,7 @@ public class dataController {
 //			System.out.println("HEADERS: " + Arrays.toString(headers));
 
 			if (clearGraph) {
-				clearDB(graphDB, true, 0);
+				clearDB(graphDB, true, 0, true);
 			}
 			readFile(graphDB, reader, headers, full_actor_list, full_director_list, full_company_list, full_genre_list, full_keyword_list,
 					full_person_list);
@@ -284,60 +286,106 @@ public class dataController {
 	 * @param periodicCommit - commit deletion after given number of transactions
 	 * 
 	 */
-	public void clearDB(GraphDatabaseService graphDB, Boolean verbose, int periodicCommit) {
-		Transaction tx = graphDB.beginTx();
-		int relCount = 0;
-		try {
-			if (verbose)
-				System.out.println("REMOVING ALL RELATIONSHIPS...");
-			startTime = System.currentTimeMillis();
-			Iterable<Relationship> allRelationships = tx.getAllRelationships();
-			for (Relationship relationship : allRelationships) {
-				relCount = relCount + 1;
-				relationship.delete();
-				if (periodicCommit != 0) {
-					if (relCount % periodicCommit == 0) {
-						System.out.println("ADDITIONAL PERIODIC COMMIT AFTER " + periodicCommit);
-						System.out.println("BUMS: " + relCount);
-						tx.commit();
-						System.out.println("COMMITTED");
-						tx.close();
-						System.out.println("CLOSED");
-						tx = graphDB.beginTx();
-						System.out.println("BEGIN");
+	public void clearDB(GraphDatabaseService graphDB, Boolean verbose, int periodicCommit, boolean useCypher) {
+//		Transaction tx = graphDB.beginTx();
+		if (useCypher) {
+			if (verbose) System.out.println("USING CYPHER TO REMOVE EVERYTHING");
+			String rows = "";
+			boolean nodesLeft = true;
+			String query = "MATCH (n)\nWITH n LIMIT 100000 DETACH DELETE n;";
+			while (nodesLeft) {
+				try (Transaction txcheck = graphDB.beginTx()) {
+					long number= txcheck.getAllNodes().stream().count();
+					if (number > 0) {
+						if (verbose) System.out.println("EXECUTING: " + query);
+						Result result = txcheck.execute(query);
+						while (result.hasNext()) {
+							Map<String, Object> row = result.next();
+							for (Entry<String, Object> column : row.entrySet()) {
+//									System.out.println(column.getKey() + ": " + column.getValue());
+								rows += column.getKey() + ": " + column.getValue();
+							}
+							rows += "\n";
+						}
+					} else {
+						nodesLeft = false;
 					}
+					txcheck.commit();
 				}
 			}
-			if (verbose)
-				System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
-			if (verbose)
-				System.out.println("COMMITTING DELETION OF " + relCount + " RELATIONS.");
-//			startTime = System.currentTimeMillis();
-			if (verbose)
-				System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
-		} finally {
-			tx.commit();
-		}
-		tx = graphDB.beginTx();
-		try {
-			if (verbose)
-				System.out.print("REMOVING NODES...");
-			startTime = System.currentTimeMillis();
-			ResourceIterable<Node> nodeList = tx.getAllNodes();
-			int nodeCount = 0;
-			for (Node nodetodelete : nodeList) {
-				nodeCount = nodeCount + 1;
-				nodetodelete.delete();
+
+//			Transaction tx = graphDB.beginTx();
+//			System.out.println("EXECUTING: " + query);
+//			Result result = tx.execute(query);
+//			tx.commit();
+//			while (result.hasNext()) {
+//				Map<String, Object> row = result.next();
+//				for (Entry<String, Object> column : row.entrySet()) {
+////							System.out.println(column.getKey() + ": " + column.getValue());
+//					rows += column.getKey() + ": " + column.getValue();
+//				}
+//				rows += "\n";
+//			}
+//			System.out.println(rows);
+
+		} else {
+			Transaction tx = graphDB.beginTx();
+			int relCount = 0;
+			// REMOVING OF RELATIONSHIPS (needed because nodes can only be deleted if they
+			// dont have any relationships...what is shitty).
+			try {
+				if (verbose)
+					System.out.println("REMOVING ALL RELATIONSHIPS...");
+				startTime = System.currentTimeMillis();
+				Iterable<Relationship> allRelationships = tx.getAllRelationships();
+				for (Relationship relationship : allRelationships) {
+					relCount = relCount + 1;
+					relationship.delete();
+					if (periodicCommit != 0) {
+						if (relCount % periodicCommit == 0) {
+							System.out.println("ADDITIONAL PERIODIC COMMIT AFTER " + periodicCommit);
+							System.out.println("BUMS: " + relCount);
+							tx.commit();
+							System.out.println("COMMITTED");
+							tx.close();
+							System.out.println("CLOSED");
+							tx = graphDB.beginTx();
+							System.out.println("BEGIN");
+						}
+					}
+				}
+				if (verbose)
+					System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
+				if (verbose)
+					System.out.println("COMMITTING DELETION OF " + relCount + " RELATIONS.");
+				if (verbose)
+					System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
+			} finally {
+				tx.commit();
 			}
-			if (verbose)
-				System.out.println("REMOVED " + nodeCount + " NODES. THIS TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
-			if (verbose)
-				System.out.println("COMMITTING DELETION OF " + nodeCount + " NODES.");
+
+			// REMOVING OF NODES
+			tx = graphDB.beginTx();
+			try {
+				if (verbose)
+					System.out.print("REMOVING NODES...");
+				startTime = System.currentTimeMillis();
+				ResourceIterable<Node> nodeList = tx.getAllNodes();
+				int nodeCount = 0;
+				for (Node nodetodelete : nodeList) {
+					nodeCount = nodeCount + 1;
+					nodetodelete.delete();
+				}
+				if (verbose)
+					System.out.println("REMOVED " + nodeCount + " NODES. THIS TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
+				if (verbose)
+					System.out.println("COMMITTING DELETION OF " + nodeCount + " NODES.");
 //			startTime = System.currentTimeMillis();
-			if (verbose)
-				System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
-		} finally {
-			tx.commit();
+				if (verbose)
+					System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
+			} finally {
+				tx.commit();
+			}
 		}
 	}
 
@@ -917,12 +965,12 @@ public class dataController {
 					System.out.print("\nREMOVING INDEX: " + index.getName());
 				index.drop();
 			}
-			System.out.println("INDEX DROPPED.");
+
 			tx.commit();
 //			tx.close();
 		}
 		if (verbose)
-			System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
+			System.out.println("\nTOOK " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
 	public void loadEdgeListbyCypherNodesAndRelations(GraphDatabaseService graphDB, File inputFile, char delimiter, boolean weighted) {

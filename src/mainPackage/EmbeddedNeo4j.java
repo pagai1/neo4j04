@@ -45,25 +45,31 @@ public class EmbeddedNeo4j {
 
 	// ########################################################
 //	// MOVIEDB
-//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
-////	private static final File inputFile = new File(homeDir + "/graph-data/tmdb.csv");
-//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
-//	private static String identifier = "movie";
-//	private static enums.Labels mainLabel = enums.Labels.PERSON;
-//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
-//	private static int maxRounds = 10001;
+	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
+//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb.csv");
+	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
+	private static String identifier = "movie";
+	private static enums.Labels mainLabel = enums.Labels.PERSON;
+	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
+	private static String labelString = "PERSON";
+	private static String relationString = "ACTED_WITH";
+	private static int maxRounds = 10001;
+	private static int startRound = 500;
+	private static int step = 500;
 
 //	EDGELIST
-	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
-//	private static final File inputFile = new File(homeDir + "/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
-	private static final File inputFile = new File(homeDir + "/graph-data/pokec/soc-pokec-relationships_weighted.txt");
-	private static String identifier = "deezer";
-	private static Labels mainLabel = Labels.USER;
-	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
-	private static String labelString = "USER";
-	private static String relationString = "IS_FRIEND_OF";
-	private static int maxRounds = 10001;
-
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
+////	private static final File inputFile = new File(homeDir + "/_studium/_BA/_KN/graph-data/deezer_clean_data/both.csv");
+//	private static final File inputFile = new File(homeDir + "/graph-data/pokec/soc-pokec-relationships_weighted.txt");
+//	private static String identifier = "deezer";
+//	private static Labels mainLabel = Labels.USER;
+//	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
+//	private static String labelString = "USER";
+//	private static String relationString = "IS_FRIEND_OF";
+//	private static int maxRounds = 500001;
+//	private static int startRound = 25000;
+//	private static int step = 25000;
+	
 //	GEO
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/OSRM/").toPath();
 //	private static final File inputFile = new File(homeDir + "/graph-data/OSRM/final_semicolon.txt");
@@ -126,6 +132,12 @@ public class EmbeddedNeo4j {
 	private static String outputFile = identifier + "db.csv";
 
 	public static void main(String[] args) throws IOException {
+		if (args.length != 0) {
+			startRound = Integer.parseInt(args[0]);
+			maxRounds = Integer.parseInt(args[1]);
+			step = Integer.parseInt(args[2]);
+		}
+		
 		long startTime = System.currentTimeMillis();
 		System.out.print("BUILDING DATABASE... " + databaseDirectory + "\n");
 		long buildTime = System.currentTimeMillis();
@@ -136,7 +148,7 @@ public class EmbeddedNeo4j {
 		dataController myDataController = new dataController(graphDB);
 
 //		rounds is here taken to use increasing amount of data and make loops to keep it running to test different sizes. Used for example in general tests.
-		for (int round = 25000; round < 5000001; round = round + 25000) {
+		for (int round = startRound; round < maxRounds; round = round + step) {
 			if (mainVerbose)
 				System.out.println("######## STARTING WITH ROUND: " + round);
 				System.out.print("######## STARTING ");
@@ -151,8 +163,8 @@ public class EmbeddedNeo4j {
 						System.out.println("WITHOUT INDIZES #########");
 					}
 				
-				Boolean clearAndCreateIndizesVerbose = true;
-				myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0);
+				Boolean clearAndCreateIndizesVerbose = mainVerbose;
+				myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0, true);
 				myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
 //				myDataController.clearDBByCypher(graphDB, clearAndCreateIndizesVerbose);
 				if (createIndizes)
@@ -177,7 +189,7 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("geo")) {
-					myDataController.runGeoImportByMethods(inputFile, identifier, "|", 0, true, true, 0, true);
+					myDataController.runGeoImportByMethods(inputFile, identifier, ";", 0, true, true, 0, mainVerbose);
 				}
 
 				if (identifier.equals("general_tests")) {
@@ -247,7 +259,7 @@ public class EmbeddedNeo4j {
 					weightString = "weight";
 				}
 //				algoVerbose = false;
-				PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, weightString, false, false, 0);
+				PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, weightString, false, algoVerbose, 0);
 				
 				/**
 				 * DEGREE CENTRALITY
