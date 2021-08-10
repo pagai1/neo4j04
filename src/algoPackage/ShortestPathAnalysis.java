@@ -33,6 +33,7 @@ public class ShortestPathAnalysis {
 	private static long startTime;
 	private static double startTimeSingle;
 	private static long fullStartTime;
+	private static int pathCounter = 0;
 
 	// Constructor
 	public ShortestPathAnalysis(GraphDatabaseService inputGraphDB) {
@@ -110,8 +111,12 @@ public class ShortestPathAnalysis {
 					Node startNode = nodeList.get(i);
 					for (int j = 0; j < nodeCount; j++) {
 						Node endNode = nodeList.get(j);
-						if (endNode != startNode) {
+						if (endNode.getId() != startNode.getId()) {
 							executeFinderShortestPath(startNode, endNode, finderShortestPath, verbose);
+							if (pathCounter++ % 1000 == 0) {
+								System.out.println("COUNTER: " + pathCounter);
+
+							}
 						}
 					}
 				}
@@ -125,8 +130,12 @@ public class ShortestPathAnalysis {
 					Node startNode = nodeList.get(i);
 					for (int j = 0; j < nodeCount; j++) {
 						Node endNode = nodeList.get(j);
-						if (endNode != startNode) {
+						if (endNode.getId() != startNode.getId()) {
 							executeFinderDijkstra(startNode, endNode, finderDijkstra, verbose);
+							if (pathCounter++ % 1000 == 0) {
+								System.out.println("COUNTER: " + pathCounter);
+
+							}
 						}
 					}
 				}
@@ -153,8 +162,12 @@ public class ShortestPathAnalysis {
 					Node startNode = nodeList.get(i);
 					for (int j = 0; j < nodeCount; j++) {
 						Node endNode = nodeList.get(j);
-						if (endNode != startNode) {
+						if (endNode.getId() != startNode.getId()) {
 							executeFinderAStar(startNode, endNode, finderAStar, verbose);
+							if (pathCounter++ % 1000 == 0) {
+								System.out.println("COUNTER: " + pathCounter);
+
+							}
 						}
 					}
 				}

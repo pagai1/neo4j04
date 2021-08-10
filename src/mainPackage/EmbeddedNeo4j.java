@@ -34,15 +34,18 @@ public class EmbeddedNeo4j {
 //	private static final File inputFolder = new File(homeDir + "/graph-data/");
 //	private static final File importFolder = new File("/var/lib/neo4j/import/");
 //	private static final File pluginsFolder = new File(homeDir + "/graph-data/general_db_data/plugins");
-	
+
 	private static final String homeDir = System.getProperty("user.home");
-	
+
 	private static Boolean cleanAndCreate = true;
 	private static Boolean doAlgo = true;
 	private static Boolean mainVerbose = false;
 	private static Boolean algoVerbose = false;
 	private static Boolean doExport = false;
 
+	private static Boolean doPageRank = false;
+	private static Boolean doShortestPath = true;
+	
 	// ########################################################
 //	// MOVIEDB
 	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
@@ -54,8 +57,8 @@ public class EmbeddedNeo4j {
 	private static String labelString = "PERSON";
 	private static String relationString = "ACTED_WITH";
 	private static int maxRounds = 10001;
-	private static int startRound = 500;
-	private static int step = 500;
+	private static int startRound = 100;
+	private static int step = 100500;
 
 //	EDGELIST
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
@@ -69,7 +72,7 @@ public class EmbeddedNeo4j {
 //	private static int maxRounds = 500001;
 //	private static int startRound = 25000;
 //	private static int step = 25000;
-	
+
 //	GEO
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/OSRM/").toPath();
 //	private static final File inputFile = new File(homeDir + "/graph-data/OSRM/final_semicolon.txt");
@@ -137,7 +140,7 @@ public class EmbeddedNeo4j {
 			maxRounds = Integer.parseInt(args[1]);
 			step = Integer.parseInt(args[2]);
 		}
-		
+
 		long startTime = System.currentTimeMillis();
 		System.out.print("BUILDING DATABASE... " + databaseDirectory + "\n");
 		long buildTime = System.currentTimeMillis();
@@ -151,18 +154,18 @@ public class EmbeddedNeo4j {
 		for (int round = startRound; round < maxRounds; round = round + step) {
 			if (mainVerbose)
 				System.out.println("######## STARTING WITH ROUND: " + round);
-				System.out.print("######## STARTING ");
+			System.out.print("######## STARTING ");
 
 			@SuppressWarnings("unused")
 			int lineLimit = 0;
 			Boolean createIndizes = true;
 			if (cleanAndCreate) {
-					if (createIndizes) {
-						System.out.println("WITH INDIZES #########");
-					} else {
-						System.out.println("WITHOUT INDIZES #########");
-					}
-				
+				if (createIndizes) {
+					System.out.println("WITH INDIZES #########");
+				} else {
+					System.out.println("WITHOUT INDIZES #########");
+				}
+
 				Boolean clearAndCreateIndizesVerbose = mainVerbose;
 				myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0, true);
 				myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
@@ -178,13 +181,14 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("deezer")) {
-					myDataController.runDeezerImportByMethods(inputFile, identifier, "," , round, true, true, 10000, false);
+					myDataController.runDeezerImportByMethods(inputFile, identifier, ",", round, true, true, 10000, false);
 //					myDataController.runDeezerImportByCypher(inputFile, 10000, true, true, 0);
 //					myDataController.printAll(graphDB);
 				}
 
 				if (identifier.equals("cooccs")) {
-					// this is normally not needed, or exeucted, as the DB will be imported from the NLP-toolbox-creation. :D
+					// this is normally not needed, or exeucted, as the DB will be imported from the
+					// NLP-toolbox-creation. :D
 					myDataController.runCooccsImportByMethods(graphDB, inputFile, 0, true);
 				}
 
@@ -232,35 +236,40 @@ public class EmbeddedNeo4j {
 				/**
 				 * SHORTEST PATH
 				 */
+				if (doShortestPath) {
+					ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
+					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular" , algoVerbose);
+//					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , algoVerbose);
+//					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar", algoVerbose);
 
-//				ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
-//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular" , algoVerbose);
-//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , algoVerbose);
-//				SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar", algoVerbose);
-
-//				SPAnalysis.getShortestPath(enums.Labels.USER, "5", enums.Labels.USER, "134", enums.RelationshipTypes.IS_FRIEND_OF);
-//				SPAnalysis.getShortestPath(enums.Labels.ACTOR, "Forest Whitaker", enums.Labels.ACTOR, "Miles Teller");
-//				SPAnalysis.getAllShortestPaths(enums.Labels.SINGLE_NODE,enums.RelationshipTypes.IS_CONNECTED);
-
+//					SPAnalysis.getShortestPath(enums.Labels.USER, "5", enums.Labels.USER, "134", enums.RelationshipTypes.IS_FRIEND_OF);
+//					SPAnalysis.getShortestPath(enums.Labels.ACTOR, "Forest Whitaker", enums.Labels.ACTOR, "Miles Teller");
+//					SPAnalysis.getAllShortestPaths(enums.Labels.SINGLE_NODE,enums.RelationshipTypes.IS_CONNECTED);
+				}
+				
+				
+				
 				/**
 				 * PAGERANK
 				 */
-				PageRankAnalysis PRAnalysis= new PageRankAnalysis(graphDB);
-				// weightstring is used to create subgraph with property on relation
-				// also it is used to call pagerank with use attribute in calculation.
-				String weightString = null;
-				if (identifier.equals("cooccs")) {
-					weightString = "count";
-				}
-				if (identifier.equals("deezer")) {
-					weightString = "weight";
-				}
-				if (identifier.equals("geo")) {
-					weightString = "weight";
-				}
+				if (doPageRank) {
+
+					PageRankAnalysis PRAnalysis = new PageRankAnalysis(graphDB);
+					// weightstring is used to create subgraph with property on relation
+					// also it is used to call pagerank with use attribute in calculation.
+					String weightString = null;
+					if (identifier.equals("cooccs")) {
+						weightString = "count";
+					}
+					if (identifier.equals("deezer")) {
+						weightString = "weight";
+					}
+					if (identifier.equals("geo")) {
+						weightString = "weight";
+					}
 //				algoVerbose = false;
-				PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, weightString, false, algoVerbose, 0);
-				
+					PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, weightString, false, algoVerbose, 0);
+				}
 				/**
 				 * DEGREE CENTRALITY
 				 */
