@@ -14,7 +14,9 @@ import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.lang.System;
 
+import org.neo4j.cypher.internal.util.symbols.RelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterable;
@@ -52,6 +54,8 @@ public class dataController {
 //	public static List<String> unique_genres = new ArrayList<String>();
 //	public static List<String> unique_keywords = new ArrayList<String>();
 
+	public static Transaction tx;
+	
 	// Constructor
 	public dataController(GraphDatabaseService inputgraphDb) {
 		graphDB = inputgraphDb;
@@ -1287,7 +1291,7 @@ public class dataController {
 	 * @param mainLabel - give the initial label for the node to be created
 	 * @param verbose   - give more outoput
 	 */
-	public void createNodes(int amount, Labels mainLabel, Boolean verbose) {
+	public void createNodes(GraphDatabaseService graphDB, int amount, Labels mainLabel, Boolean verbose) {
 		if (amount == 0)
 			amount = 1;
 		long startTime = System.currentTimeMillis();
@@ -1296,7 +1300,7 @@ public class dataController {
 			for (int i = 0; i < amount; i++) {
 				// Node without label, nearly same speed like for both methods.
 //				Node tmpNode = tx.createNode();
-//				tx.createNode();
+				tx.createNode();
 
 				// Node with initial label on creation
 //				Node tmpNode = tx.createNode(mainLabel);
@@ -1306,8 +1310,8 @@ public class dataController {
 //				tmpNode.addLabel(mainLabel);
 
 				// Node with adding property
-				Node tmpNode = tx.createNode();
-				tmpNode.setProperty("name", i);
+//				Node tmpNode = tx.createNode();
+//				tmpNode.setProperty("name", i);
 
 				// Node with adding label and property
 //				Node tmpNode = tx.createNode();
@@ -1320,12 +1324,59 @@ public class dataController {
 			int timeCreate = (int) (endCreate - createStart);
 			if (timeCreate == 0)
 				timeCreate = 1;
-			System.out.println(amount + "," + (double) (timeCreate / 1000.0) + "," + (double) ((amount * 1000) / timeCreate));
+			if (verbose) System.out.println(amount + "," + (double) (timeCreate / 1000.0) + "," + (double) ((amount * 1000) / timeCreate));
 		}
 		if (verbose)
 			System.out.println("##### NODECREATION OF " + amount + " NODES TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
+
+	/**
+	 * Creates a complete graph out of the given graphDB.
+	 * @param graphDB - the database-instance
+	 * @param mainRelation - the relation which shall be set
+	 * @param withEdgeAttributes - if true, 2 attributes will be set (sourcenode and targetnode)
+	 * @param periodicCommit - After which relations shall be an addtional commit. This shall prevent heap spaace exceptions.
+	 * @param verbose - prints out the graphinfo and timeresult of the test 
+	 * 
+	 */
+	@SuppressWarnings("resource")
+	public void createCompleteGraph(GraphDatabaseService graphDB, RelationshipTypes mainRelation, Boolean withEdgeAttributes, Boolean verbose) {
+		ResourceIterable<Node> nodeList;
+		long startTime, endTime;
+		startTime = endTime = System.currentTimeMillis();
+		int edgeCount = 0;
+		long edgeCount2 = 0;
+		long nodeCount=0;
+		tx = graphDB.beginTx();
+		Transaction txtemp = tx;
+		Transaction tx2;
+		try {
+			nodeList = tx.getAllNodes();
+			nodeCount = nodeList.stream().count();
+			for (Node node1: nodeList) {
+				for (Node node2: nodeList) {
+					edgeCount=edgeCount + 1;
+					if (withEdgeAttributes) {
+						Relationship relationship = node1.createRelationshipTo(node2, mainRelation);
+						relationship.setProperty("sourcenode", node1.getId());
+						relationship.setProperty("targetnode", node2.getId());
+					} else {
+						@SuppressWarnings("unused")
+						Relationship relationship = node1.createRelationshipTo(node2, mainRelation);	
+					}
+				}
+			}
+		} finally {
+			edgeCount2 = tx.getAllRelationships().stream().count();
+			tx.commit();
+		}
+		endTime = System.currentTimeMillis();
+
+		if (verbose)
+			System.out.println(nodeCount + "," + edgeCount2 + "," + (endTime - startTime) + "s");
+	}
+	
 	/**
 	 * This method gets all nodes and connects them to each other.
 	 * 

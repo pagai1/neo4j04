@@ -38,27 +38,29 @@ public class EmbeddedNeo4j {
 	private static final String homeDir = System.getProperty("user.home");
 
 	private static Boolean cleanAndCreate = true;
-	private static Boolean doAlgo = true;
+	private static Boolean doAlgo = false;
 	private static Boolean mainVerbose = false;
 	private static Boolean algoVerbose = false;
 	private static Boolean doExport = false;
 
 	private static Boolean doPageRank = false;
 	private static Boolean doShortestPath = true;
+
+	private static Boolean roughCleanup = true;
 	
 	// ########################################################
 //	// MOVIEDB
-	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
-//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb.csv");
-	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
-	private static String identifier = "movie";
-	private static enums.Labels mainLabel = enums.Labels.PERSON;
-	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
-	private static String labelString = "PERSON";
-	private static String relationString = "ACTED_WITH";
-	private static int maxRounds = 10001;
-	private static int startRound = 100;
-	private static int step = 100500;
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
+////	private static final File inputFile = new File(homeDir + "/graph-data/tmdb.csv");
+//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
+//	private static String identifier = "movie";
+//	private static enums.Labels mainLabel = enums.Labels.PERSON;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
+//	private static String labelString = "PERSON";
+//	private static String relationString = "ACTED_WITH";
+//	private static int maxRounds = 10001;
+//	private static int startRound = 100;
+//	private static int step = 100500;
 
 //	EDGELIST
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
@@ -100,12 +102,16 @@ public class EmbeddedNeo4j {
 //	private static int maxRounds = 10000;
 
 //	// GENERAL TESTS
-//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/general_tests/").toPath();
-//	private static final File inputFile = new File(homeDir + "/graph-data/general_tests.csv");
-//	private static String identifier = "general_tests";
-//	private static enums.Labels mainLabel = Labels.SINGLE_NODE;
-//	private static enums.RelationshipTypes mainRelation = RelationshipTypes.IS_CONNECTED;
-//	private static int maxRounds = 1000001;
+	private static final Path databaseDirectory = new File(homeDir + "/graph-data/general_tests/").toPath();
+	private static final File inputFile = new File(homeDir + "/graph-data/general_tests.csv");
+	private static String identifier = "general_tests";
+	private static enums.Labels mainLabel = Labels.SINGLE_NODE;
+	private static enums.RelationshipTypes mainRelation = RelationshipTypes.IS_CONNECTED;
+	private static String labelString = "SINGLE_NODE";
+	private static String relationString = "IS_CONNECTED";
+	private static int startRound = 1250;
+	private static int maxRounds = 3001;
+	private static int step = 250;
 
 	// ########################################################
 
@@ -128,11 +134,57 @@ public class EmbeddedNeo4j {
 
 	private static GraphDatabaseService graphDB;
 	private static DatabaseManagementService managementService;
-
+	private static dataController myDataController;
 	@SuppressWarnings("unused")
 	private static ExecutionEngine ExEngine;
 	@SuppressWarnings("unused")
 	private static String outputFile = identifier + "db.csv";
+
+	/**
+	 * C
+	 */
+	private static void getDataController() {
+		System.out.print("BUILDING/OPENING DATABASE... " + databaseDirectory + "\n");
+		long buildTime = System.currentTimeMillis();
+		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
+		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
+		graphDB = managementService.database("neo4j");
+		registerShutdownHook(managementService);
+		myDataController = new dataController(graphDB);
+	}
+
+	/**
+	 * Removes the given file/folder (recursively).
+	 * 
+	 * @param file or path to be deleted.
+	 */
+	private static void deleteDir(File file) {
+		File[] contents = file.listFiles();
+		if (contents != null) {
+			for (File f : contents) {
+				deleteDir(f);
+			}
+		}
+		file.delete();
+	}
+
+	/**
+	 * This will roughly remove the database-folder completely. This will save some
+	 * time when cleaning up the DB for a new run.
+	 * @param verbose - just a little bit output
+	 */
+	private static void roughCleanup(Boolean verbose) {
+		if (verbose) {
+			System.out.print("REMOVING FOLDERS OF DB...");
+		}
+//		File databaseFolder = new File(databaseDirectory + "/databases");
+//		File transactionFolder = new File(databaseDirectory + "/transactions");
+		deleteDir(new File(databaseDirectory + "/data/databases"));
+		deleteDir(new File(databaseDirectory + "/data/transactions"));
+		if (verbose) {
+			System.out.println("DONE.");
+		}
+	}
 
 	public static void main(String[] args) throws IOException {
 		if (args.length != 0) {
@@ -140,36 +192,45 @@ public class EmbeddedNeo4j {
 			maxRounds = Integer.parseInt(args[1]);
 			step = Integer.parseInt(args[2]);
 		}
+//		getDataController();
 
 		long startTime = System.currentTimeMillis();
-		System.out.print("BUILDING DATABASE... " + databaseDirectory + "\n");
-		long buildTime = System.currentTimeMillis();
-		managementService = new DatabaseManagementServiceBuilder(databaseDirectory).setConfigRaw(config).build();
-		System.out.println("DONE IN " + (System.currentTimeMillis() - buildTime) + "ms.");
-		graphDB = managementService.database("neo4j");
-		registerShutdownHook(managementService);
-		dataController myDataController = new dataController(graphDB);
-
 //		rounds is here taken to use increasing amount of data and make loops to keep it running to test different sizes. Used for example in general tests.
 		for (int round = startRound; round < maxRounds; round = round + step) {
-			if (mainVerbose)
+			if (mainVerbose) {
 				System.out.println("######## STARTING WITH ROUND: " + round);
-			System.out.print("######## STARTING ");
-
+				System.out.print("######## STARTING ");
+			}
 			@SuppressWarnings("unused")
 			int lineLimit = 0;
 			Boolean createIndizes = true;
 			if (cleanAndCreate) {
-				if (createIndizes) {
-					System.out.println("WITH INDIZES #########");
-				} else {
-					System.out.println("WITHOUT INDIZES #########");
-				}
-
 				Boolean clearAndCreateIndizesVerbose = mainVerbose;
-				myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0, true);
-				myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
-//				myDataController.clearDBByCypher(graphDB, clearAndCreateIndizesVerbose);
+
+				if (createIndizes) {
+					if (mainVerbose)
+						System.out.println("WITH INDIZES #########");
+				} else {
+					if (mainVerbose)
+						System.out.println("WITHOUT INDIZES #########");
+				}
+				
+				if (roughCleanup) {
+					try {
+						managementService.shutdown();
+					} catch (NullPointerException e) {
+						// TODO Auto-generated catch block
+						System.out.println("NO INSTANCE OPENED YET");
+					}
+					roughCleanup(false);
+					getDataController();
+				} else {
+					getDataController();
+					myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0, true);
+					myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
+//					myDataController.clearDBByCypher(graphDB, clearAndCreateIndizesVerbose);
+				}
+				
 				if (createIndizes)
 					myDataController.createIndexes(graphDB, identifier, clearAndCreateIndizesVerbose);
 
@@ -199,20 +260,21 @@ public class EmbeddedNeo4j {
 				if (identifier.equals("general_tests")) {
 //					myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0);
 //					myDataController.createIndexes(graphDB, identifier, clearAndCreateIndizesVerbose);
-//					myDataController.createNodes(round, mainLabel, false);
+					myDataController.createNodes(graphDB, round, mainLabel, false);
+					myDataController.createCompleteGraph(graphDB, mainRelation, true, true);
 //					myDataController.createIndexes(graphDB, identifier);
 //					myDataController.createNodes(amount);
 //					myDataController.makeCompleteGraph();
 //					myDataController.printAll(graphDB);
 				}
-				if (cleanAndCreate || mainVerbose) {
-					System.out.println("FINISHED IMPORT AFTER " + (System.currentTimeMillis() - startTime2) + "ms.");
-					try (Transaction tx = graphDB.beginTx()) {
-						System.out.println("########### DATABASE CONTENT ##########");
-						System.out.println("NODES: " + tx.getAllNodes().stream().count());
-						System.out.println("EDGES: " + tx.getAllRelationships().stream().count());
-					}
-				}
+//				if (cleanAndCreate || mainVerbose) {
+//					System.out.println("FINISHED IMPORT AFTER " + (System.currentTimeMillis() - startTime2) + "ms.");
+//					try (Transaction tx = graphDB.beginTx()) {
+//						System.out.println("########### DATABASE CONTENT ##########");
+//						System.out.println("NODES: " + tx.getAllNodes().stream().count());
+//						System.out.println("EDGES: " + tx.getAllRelationships().stream().count());
+//					}
+//				}
 			} else {
 				System.out.println("- JUST OPENING THE DB #########");
 				if (mainVerbose) {
@@ -238,7 +300,7 @@ public class EmbeddedNeo4j {
 				 */
 				if (doShortestPath) {
 					ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
-					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular" , algoVerbose);
+					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular", algoVerbose);
 //					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra" , algoVerbose);
 //					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar", algoVerbose);
 
@@ -246,9 +308,7 @@ public class EmbeddedNeo4j {
 //					SPAnalysis.getShortestPath(enums.Labels.ACTOR, "Forest Whitaker", enums.Labels.ACTOR, "Miles Teller");
 //					SPAnalysis.getAllShortestPaths(enums.Labels.SINGLE_NODE,enums.RelationshipTypes.IS_CONNECTED);
 				}
-				
-				
-				
+
 				/**
 				 * PAGERANK
 				 */
