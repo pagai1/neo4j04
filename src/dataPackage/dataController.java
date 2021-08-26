@@ -85,11 +85,12 @@ public class dataController {
 	/**
 	 * Loads given number (limit) of lines from edgeList.
 	 * 
-	 * @param inputFile      path to file
-	 * @param delimiter      give a char which is used to separate the columns
-	 * @param weighted       if true, third row of csv will be taken as weight-value
-	 * @param directed       if false, for each line 2 relations will be created
-	 * @param periodicCommit Periodic commit after a given number of transactions.
+	 * @param inputFile - path to file which is loaded
+	 * @param delimiter - give a char which is used to separate the columns
+	 * @param weighted - if true, third row of csv will be taken as weight-value
+	 * @param directed - if false, for each line 2 relations will be created
+	 * @param periodicCommit - Periodic commit after a given number of transactions.
+	 * @param verbose - be more verbose with the output
 	 */
 	public void runGeoImportByMethods(File inputFile, String identifier, String delimiter, int limit, boolean weighted, boolean directed,
 			int periodicCommit, boolean verbose) {
@@ -131,8 +132,10 @@ public class dataController {
 				nodeLine = reader.readLine();
 			}
 			reader.close();
+			// removing duplicates from nodelist
 			List<String> full_node_list_unique = full_node_list.stream().distinct().collect(Collectors.toList());
 			long startTime1 = System.currentTimeMillis();
+			// adding just the nodes first
 			try (Transaction tx = graphDB.beginTx()) {
 				int nodeCount = 0;
 				if (verbose)
@@ -152,6 +155,8 @@ public class dataController {
 			if (verbose)
 				System.out.println("ADDING EDGES...");
 			long startTime2 = System.currentTimeMillis();
+			
+			// adding node properties and edges with properties
 			Transaction tx = graphDB.beginTx();
 			try {
 				String edgeLine = reader2.readLine();
@@ -836,11 +841,11 @@ public class dataController {
 		startTime = System.currentTimeMillis();
 		IndexDefinition wordNamesIndex;
 		if (verbose)
-			System.out.println("CREATING INDEX FOR SINGLE_NODE NAME");
+			System.out.println("CREATING INDEX FOR WORD NAME");
 
 		try (Transaction tx = graphDB.beginTx()) {
 			Schema schema = tx.schema();
-			wordNamesIndex = schema.indexFor(Labels.SINGLE_NODE).on("name").withName("wordnames").create();
+			wordNamesIndex = schema.indexFor(Labels.WORD).on("name").withName("wordnames").create();
 			tx.commit();
 			if (verbose)
 				System.out.println("CREATED INDEX ON WORDS IN " + (System.currentTimeMillis() - startTime) + "ms");
@@ -1127,7 +1132,7 @@ public class dataController {
 		Labels currentLabel = null;
 		RelationshipTypes currentRelType = null;
 		if (identifier.equals("cooccs")) {
-			currentLabel = Labels.SINGLE_NODE;
+			currentLabel = Labels.WORD;
 			currentRelType = RelationshipTypes.IS_CONNECTED;
 
 		}
