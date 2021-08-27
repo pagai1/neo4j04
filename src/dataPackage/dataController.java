@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +56,7 @@ public class dataController {
 //	public static List<String> unique_keywords = new ArrayList<String>();
 
 	public static Transaction tx;
-	
+
 	// Constructor
 	public dataController(GraphDatabaseService inputgraphDb) {
 		graphDB = inputgraphDb;
@@ -94,16 +95,16 @@ public class dataController {
 
 	}
 
-	
 	/**
 	 * Loads given number (limit) of lines from edgeList.
 	 * 
-	 * @param inputFile - path to file which is loaded
-	 * @param delimiter - give a char which is used to separate the columns
-	 * @param weighted - if true, third row of csv will be taken as weight-value
-	 * @param directed - if false, for each line 2 relations will be created
+	 * @param inputFile      - path to file which is loaded
+	 * @param delimiter      - give a char which is used to separate the columns
+	 * @param weighted       - if true, third row of csv will be taken as
+	 *                       weight-value
+	 * @param directed       - if false, for each line 2 relations will be created
 	 * @param periodicCommit - Periodic commit after a given number of transactions.
-	 * @param verbose - be more verbose with the output
+	 * @param verbose        - be more verbose with the output
 	 */
 	public void runGeoImportByMethods(File inputFile, String identifier, String delimiter, int limit, boolean weighted, boolean directed,
 			int periodicCommit, boolean verbose) {
@@ -168,7 +169,7 @@ public class dataController {
 			if (verbose)
 				System.out.println("ADDING EDGES...");
 			long startTime2 = System.currentTimeMillis();
-			
+
 			// adding node properties and edges with properties
 			Transaction tx = graphDB.beginTx();
 			try {
@@ -311,20 +312,23 @@ public class dataController {
 	 * @param graphDB        - the graphdatabase
 	 * @param verbose        - give output
 	 * @param periodicCommit - commit deletion after given number of transactions
-	 * @param useCypher 	 - use cypher instead of method "delete" for relations and nodes
+	 * @param useCypher      - use cypher instead of method "delete" for relations
+	 *                       and nodes
 	 */
 	public void clearDB(GraphDatabaseService graphDB, Boolean verbose, int periodicCommit, boolean useCypher) {
 //		Transaction tx = graphDB.beginTx();
 		if (useCypher) {
-			if (verbose) System.out.println("USING CYPHER TO REMOVE EVERYTHING");
+			if (verbose)
+				System.out.println("USING CYPHER TO REMOVE EVERYTHING");
 			String rows = "";
 			boolean nodesLeft = true;
 			String query = "MATCH (n)\nWITH n LIMIT 100000 DETACH DELETE n;";
 			while (nodesLeft) {
 				try (Transaction txcheck = graphDB.beginTx()) {
-					long number= txcheck.getAllNodes().stream().count();
+					long number = txcheck.getAllNodes().stream().count();
 					if (number > 0) {
-						if (verbose) System.out.println("EXECUTING: " + query);
+						if (verbose)
+							System.out.println("EXECUTING: " + query);
 						Result result = txcheck.execute(query);
 						while (result.hasNext()) {
 							Map<String, Object> row = result.next();
@@ -390,7 +394,7 @@ public class dataController {
 				tx.commit();
 				if (verbose)
 					System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
-				
+
 			}
 
 			// REMOVING OF NODES
@@ -401,7 +405,7 @@ public class dataController {
 					System.out.print("REMOVING NODES...");
 				startTime = System.currentTimeMillis();
 				ResourceIterable<Node> nodeList = tx.getAllNodes();
-				
+
 				for (Node nodetodelete : nodeList) {
 					nodeCount = nodeCount + 1;
 					nodetodelete.delete();
@@ -410,7 +414,7 @@ public class dataController {
 					System.out.println("REMOVED " + nodeCount + " NODES. THIS TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
 
 //			startTime = System.currentTimeMillis();
-				
+
 			} finally {
 				if (verbose)
 					System.out.println("COMMITTING DELETION OF " + nodeCount + " NODES.");
@@ -425,14 +429,20 @@ public class dataController {
 	 * This Method loads the file which is read by the reader-instance. It creates
 	 * nodes for all of them and adds them to the graph.
 	 * 
-	 * @param inputgraphDb - the database instance
-	 * @param reader - the appropriate readerinstance which opened the file
-	 * @param headers - the headerlist
-	 * @param full_actor_list - the list of actors which will be filled when reading the file
-	 * @param full_director_list - the list of directors which will be filled when reading the file
-	 * @param full_company_list - the list of companies which will be filled when reading the file
-	 * @param full_genre_list - the list of genres which will be filled when reading the file
-	 * @param full_keyword_list - the list of keywords which will be filled when reading the file
+	 * @param inputgraphDb       - the database instance
+	 * @param reader             - the appropriate readerinstance which opened the
+	 *                           file
+	 * @param headers            - the headerlist
+	 * @param full_actor_list    - the list of actors which will be filled when
+	 *                           reading the file
+	 * @param full_director_list - the list of directors which will be filled when
+	 *                           reading the file
+	 * @param full_company_list  - the list of companies which will be filled when
+	 *                           reading the file
+	 * @param full_genre_list    - the list of genres which will be filled when
+	 *                           reading the file
+	 * @param full_keyword_list  - the list of keywords which will be filled when
+	 *                           reading the file
 	 * @throws IOException
 	 */
 	private void readFile(GraphDatabaseService inputgraphDb, BufferedReader reader, String[] headers, List<String> full_actor_list,
@@ -751,8 +761,14 @@ public class dataController {
 			while (nodeIterator.hasNext()) {
 				Node nodeFromList = nodeIterator.next();
 				String nodeLabels = nodeFromList.getLabels().toString();
-				if (moreDetails)
-					System.out.println("NODE ## NAME: " + nodeFromList.getProperty("name") + " # LABELS: " + nodeLabels);
+				if (moreDetails) {
+
+					System.out.print("NODE ## LABELS: " + nodeLabels + " PROPERTIES: ");
+					for (Entry<String, Object> bums : nodeFromList.getAllProperties().entrySet()) {
+						System.out.print(bums.getKey() + ": " + bums.getValue() + " - ");
+					}
+					System.out.println("");
+				}
 				nodeCount++;
 			}
 			ResourceIterable<Relationship> edgelist = tx.getAllRelationships();
@@ -760,9 +776,14 @@ public class dataController {
 			int edgeCount = 0;
 			while (edgeIterator.hasNext()) {
 				Relationship edgeFromList = edgeIterator.next();
-				if (moreDetails)
-					System.out.println("EDGE ## FROM: " + edgeFromList.getStartNode().getProperty("name") + " TO: "
+				if (moreDetails) {
+					System.out.print("EDGE ## FROM: " + edgeFromList.getStartNode().getProperty("name") + " TO: "
 							+ edgeFromList.getEndNode().getProperty("name"));
+					for (Entry<String, Object> bums : edgeFromList.getAllProperties().entrySet()) {
+						System.out.print(bums.getKey() + ": " + bums.getValue() + " - ");
+					}
+					System.out.println("");
+				}
 				edgeCount++;
 			}
 
@@ -773,11 +794,13 @@ public class dataController {
 	}
 
 	/**
-	 * This method will cause the index-creation within the given database instance for the given identifier.
+	 * This method will cause the index-creation within the given database instance
+	 * for the given identifier.
 	 * 
-	 * @param graphDB - the database instance which shall be used
+	 * @param graphDB    - the database instance which shall be used
 	 * @param identifier - identifier to decide which indizes shall be added
-	 * @param verbose - verbosity which will print out a little more output on what is happening
+	 * @param verbose    - verbosity which will print out a little more output on
+	 *                   what is happening
 	 */
 	public void createIndexes(GraphDatabaseService graphDB, String identifier, boolean verbose) {
 		if (identifier.equals("cooccs")) {
@@ -939,7 +962,8 @@ public class dataController {
 	 * This method creates indexes for actornames, movienames, keywords, genres,
 	 * directory and company-names.
 	 * 
-	 * @param graphDB - hand over the database instance on which you want to create the indizes
+	 * @param graphDB - hand over the database instance on which you want to create
+	 *                the indizes
 	 * @param verbose - little verbosity to see what is happening
 	 */
 
@@ -1327,32 +1351,153 @@ public class dataController {
 
 	/**
 	 * This method will load the cooccs-database from a given apoc-csv export.
-	 * @param graphDB - the database instance which shall be used
-	 * @param inputfile - the input file which shall be loaded. This file shall be a APOC-CSV export.
-	 * @param periodicCommit - shall there be a periodic commit? Number = 0 means no. Any other number will cause a periodic commit after every X lines. 
-	 * @param verbose - if true the method will give some output what is happening.
+	 * 
+	 * @param graphDB             - the database instance which shall be used
+	 * @param inputFile           - the input file which shall be loaded. This file
+	 *                            shall be a APOC-CSV export.
+	 * @param inputDirectedData   - set true if the input-file contains directed
+	 *                            edges, if set this is set to false and
+	 *                            outputDirected graph is set to true, 2 edges will
+	 *                            be created for one line.
+	 * @param outputDirectedGraph - if inputDirectedGraph is set to false and this
+	 *                            parameter is set to true, a 2 edges will be
+	 *                            created for a single edge-line of the file.
+	 * @param verbose             - if true the method will give some output what is
+	 *                            happening.
+	 * 
 	 */
-	public void runCooccsImportByMethods(GraphDatabaseService graphDB, File inputFile, int periodicCommit, boolean verbose) {
+	public void runCooccsImportByMethods(GraphDatabaseService graphDB, File inputFile, boolean inputDirectedData, boolean outputDirectedGraph,
+			boolean verbose) {
 		if (verbose)
 			System.out.println("LOADING COOCCS BY METHODS");
+
 //		loadEdgeListbyMethods(graphDB, inputFile, ",", 0, "cooccs", true, true, periodicCommit, verbose);
-		
+
 		// there is the the same name for a function in NetworkX-tests.
-		create_graph_from_neo4j_csv(graphDB, inputFile, true, true, verbose);
 		
+		long endTime = System.currentTimeMillis();
+		long startTime = System.currentTimeMillis();
+		create_graph_from_neo4j_csv(graphDB, inputFile, true, true, verbose);
+		endTime = System.currentTimeMillis();
+		double runTime = ((endTime - startTime) / 1000.0);
+		System.out.println("LOAD OF APOC-CSV TOOK: " + runTime + "s");
 	}
 
-	private void create_graph_from_neo4j_csv(GraphDatabaseService graphDB, File inputFile, Boolean inputDirectedData, Boolean outputDirectedGraph , boolean verbose) {
-		if (verbose) System.out.println("IMPORTING " + inputFile);
+	/**
+	 * Finds the index of a given value in the given array
+	 * 
+	 * @param headers    - the given array
+	 * @param columnName - the string of the value you are searching for.
+	 *                   ".contains()" is used.
+	 * @return the index of the given value. if not found "-1" is returned.
+	 */
+	private int findIndexOfHeaderColumns(String[] headers, String columnName) {
+		// if array is Null
+		if (headers == null) {
+			return -1;
+		}
+
+		// find length of array
+		int len = headers.length;
+		int i = 0;
+
+		// traverse in the array
+		while (i < len) {
+
+			// if the i-th element is t
+			// then return the index
+			if (headers[i].contains(columnName)) {
+				return i;
+			} else {
+				i = i + 1;
+			}
+		}
+		return -1;
+
+	}
+
+	private void create_graph_from_neo4j_csv(GraphDatabaseService graphDB, File inputFile, Boolean inputDirectedData, Boolean outputDirectedGraph,
+			boolean verbose) {
+		if (verbose)
+			System.out.println("IMPORTING " + inputFile);
 		try {
-			String[] headers;
 			reader = new BufferedReader(new FileReader(inputFile));
-			headers = reader.readLine().split(",");
-					
+			String[] headers = reader.readLine().split(",");
+
+			int index_first_node_attribute = 2;
+			int index_last_node_attribute = (findIndexOfHeaderColumns(headers, "_start") - 1); // this marks the border between node and edge
+																								// attributes
+			int index_first_edge_attribute = (findIndexOfHeaderColumns(headers, "_end") + 1);
+			int index_last_edge_attribute = (headers.length - 1);
+			// "-1" prevents shorter arrays without null values...
+			String[] line = reader.readLine().split(",", -1);
+			String tmpLine = "";
+			Label nodeLabel = enums.Labels.WORD;
+			RelationshipTypes edgeLabel = enums.RelationshipTypes.IS_CONNECTED;
+			try (Transaction tx = graphDB.beginTx()) {
+
+				while (line != null) {
+					if (verbose) System.out.println(Arrays.toString(line));
+					if (!line[0].equals("")) {
+						if (verbose)
+							System.out.print("NODE - ");
+						// this is a row which contains a node
+						nodeLabel = enums.Labels.valueOf(line[1].replace(":", "").replace("\"", ""));
+						Node node = tx.createNode(nodeLabel);
+						node.setProperty("id", line[0]);
+						for (int i = index_first_node_attribute; i <= index_last_node_attribute; i++) {
+							node.setProperty(headers[i].replace("\"", ""), line[i].replace("\"", ""));
+						}
+						if (verbose)
+							System.out.println("ADDED NODE: " + line[2]);
+
+					}
+
+					if (line[0].equals("")) {
+						edgeLabel = enums.RelationshipTypes.valueOf(line[index_first_edge_attribute].replace("\"", ""));
+						if (verbose)
+							System.out.print("EDGE - ");
+						Relationship relationship1 = (tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 2])
+								.createRelationshipTo(tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 1]), edgeLabel));
+						for (int j = index_first_edge_attribute; j < line.length; j++) {
+							relationship1.setProperty(headers[j], line[j]);
+						}
+						if (verbose)
+							System.out.println(
+									"ADDED ONE EDGE: " + line[index_first_edge_attribute - 2] + " --> " + line[index_first_edge_attribute - 1]);
+
+						// if there is undirected input data, but an directed graph is needed
+						// all data is pulled out of the line by the indexes. like type (label of
+						// relationship) and attribute-data.
+						// index_first_edge_attribute - 1 = _end
+						// index_first_edge_attribute - 2 = _start
+						if (!inputDirectedData && outputDirectedGraph) {
+							Relationship relationship2 = (tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 1]).createRelationshipTo(
+									tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 2]),
+									enums.RelationshipTypes.valueOf(line[index_first_edge_attribute].replace("\"", ""))));
+							for (int j = index_first_edge_attribute; j < index_last_edge_attribute; j++) {
+								relationship2.setProperty(headers[j], line[j]);
+							}
+							if (verbose)
+								System.out.println("ADDED SECOND EDGE: " + line[index_first_edge_attribute - 1] + " --> "
+										+ line[index_first_edge_attribute - 2]);
+						}
+
+					}
+					tmpLine = reader.readLine();
+					if (tmpLine != null) {
+						line = tmpLine.split(",", -1);
+					} else {
+						break;
+					}
+				}
+				tx.commit();
+			}
+
 			reader.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("SOMETHING WENT WRONG WITH THE FILE-READING...CHECK IT.");
+			System.out.println(e.getMessage());
 		}
 	}
 
@@ -1397,20 +1542,24 @@ public class dataController {
 			int timeCreate = (int) (endCreate - createStart);
 			if (timeCreate == 0)
 				timeCreate = 1;
-			if (verbose) System.out.println(amount + "," + (double) (timeCreate / 1000.0) + "," + (double) ((amount * 1000) / timeCreate));
+			if (verbose)
+				System.out.println(amount + "," + (double) (timeCreate / 1000.0) + "," + (double) ((amount * 1000) / timeCreate));
 		}
 		if (verbose)
 			System.out.println("##### NODECREATION OF " + amount + " NODES TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
 	}
 
-
 	/**
 	 * Creates a complete graph out of the given graphDB.
-	 * @param graphDB - the database-instance
-	 * @param mainRelation - the relation which shall be set
-	 * @param withEdgeAttributes - if true, 2 attributes will be set (sourcenode and targetnode)
-	 * @param periodicCommit - After which relations shall be an addtional commit. This shall prevent heap spaace exceptions.
-	 * @param verbose - prints out the graphinfo and timeresult of the test 
+	 * 
+	 * @param graphDB            - the database-instance
+	 * @param mainRelation       - the relation which shall be set
+	 * @param withEdgeAttributes - if true, 2 attributes will be set (sourcenode and
+	 *                           targetnode)
+	 * @param periodicCommit     - After which relations shall be an addtional
+	 *                           commit. This shall prevent heap spaace exceptions.
+	 * @param verbose            - prints out the graphinfo and timeresult of the
+	 *                           test
 	 * 
 	 */
 	@SuppressWarnings("resource")
@@ -1420,23 +1569,23 @@ public class dataController {
 		startTime = endTime = System.currentTimeMillis();
 		int edgeCount = 0;
 		long edgeCount2 = 0;
-		long nodeCount=0;
+		long nodeCount = 0;
 		tx = graphDB.beginTx();
 		Transaction txtemp = tx;
 		Transaction tx2;
 		try {
 			nodeList = tx.getAllNodes();
 			nodeCount = nodeList.stream().count();
-			for (Node node1: nodeList) {
-				for (Node node2: nodeList) {
-					edgeCount=edgeCount + 1;
+			for (Node node1 : nodeList) {
+				for (Node node2 : nodeList) {
+					edgeCount = edgeCount + 1;
 					if (withEdgeAttributes) {
 						Relationship relationship = node1.createRelationshipTo(node2, mainRelation);
 						relationship.setProperty("sourcenode", node1.getId());
 						relationship.setProperty("targetnode", node2.getId());
 					} else {
 						@SuppressWarnings("unused")
-						Relationship relationship = node1.createRelationshipTo(node2, mainRelation);	
+						Relationship relationship = node1.createRelationshipTo(node2, mainRelation);
 					}
 				}
 			}
@@ -1449,7 +1598,7 @@ public class dataController {
 		if (verbose)
 			System.out.println(nodeCount + "," + edgeCount2 + "," + (endTime - startTime) + "s");
 	}
-	
+
 	/**
 	 * This method gets all nodes and connects them to each other.
 	 * 

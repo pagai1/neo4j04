@@ -80,7 +80,7 @@ public class EmbeddedNeo4j {
 
 // COOCCSDB
 	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
-	private static final File inputFile = new File(homeDir + "/graph-data/cooccs.csv");
+	private static final File inputFile = new File(databaseDirectory + "/cooccsdb.csv");
 	private static String identifier = "cooccs";
 	private static enums.Labels mainLabel = enums.Labels.WORD;
 	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
@@ -257,11 +257,12 @@ public class EmbeddedNeo4j {
 				}
 
 				if (identifier.equals("cooccs")) {
-					// this is normally not needed, or exeucted, as the DB will be imported from the
-					// NLP-toolbox-creation. :D
-					// the called method here is loading the given file from a apoc-CSV export. No available function to import exported stuff again.
-					myDataController.runCooccsImportByMethods(graphDB, inputFile, 0, true);
-					
+					// This is normally not needed, or exeucted, as the DB can be imported from the
+					// NLP-toolbox-creation. ;)
+					// The called method here is loading the given file from a apoc-CSV export. No available function to import exported stuff again.
+					myDataController.runCooccsImportByMethods(graphDB, inputFile, true, true, false);
+					myDataController.printAll(graphDB,false);
+	
 				}
 
 				if (identifier.equals("geo")) {
