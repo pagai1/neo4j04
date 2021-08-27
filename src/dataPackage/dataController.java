@@ -82,6 +82,19 @@ public class dataController {
 
 	}
 
+	public void runMovieDBImportByCypher(File inputFile, int limit, boolean weighted, boolean directed, int periodicCommit) {
+//		clearDB(graphDB);
+//		clearIndexes(graphDB, true);
+//		createIndexesDeezerDB(graphDB, true);
+//		createIndexesDeezerDBByCypher(graphDB);
+		System.out.println("LOADING BY " + limit + " LINES BY CYPHER");
+//		loadEdgeListbyCypher(graphDB, inputFile_deezer, ',', weighted);
+//		loadEdgeListbyCypherNodesAndRelations(graphDB, inputFile_deezer, ',', weighted);
+		loadEdgeListbyCypherInOne(graphDB, inputFile, ',', limit, weighted, directed, periodicCommit);
+
+	}
+
+	
 	/**
 	 * Loads given number (limit) of lines from edgeList.
 	 * 
@@ -220,7 +233,12 @@ public class dataController {
 			int periodicCommit, boolean verbose) {
 		if (verbose)
 			System.out.println("LOADING EDGELIST BY METHODS");
+		long endTime = System.currentTimeMillis();
+		long startTime = System.currentTimeMillis();
 		loadEdgeListbyMethods(graphDB, inputFile, delimiter, limit, identifier, weighted, directed, periodicCommit, verbose);
+		endTime = System.currentTimeMillis();
+//		System.out.printf("%.9f s.\n", (double) ((System.nanoTime() - startTimeSingle) / 1000.0));
+		System.out.println((endTime - startTime) / 1000.0);
 	}
 
 	public int getNumberOfLines(File inputFile) throws IOException {
@@ -293,7 +311,7 @@ public class dataController {
 	 * @param graphDB        - the graphdatabase
 	 * @param verbose        - give output
 	 * @param periodicCommit - commit deletion after given number of transactions
-	 * 
+	 * @param useCypher 	 - use cypher instead of method "delete" for relations and nodes
 	 */
 	public void clearDB(GraphDatabaseService graphDB, Boolean verbose, int periodicCommit, boolean useCypher) {
 //		Transaction tx = graphDB.beginTx();
@@ -365,35 +383,40 @@ public class dataController {
 				}
 				if (verbose)
 					System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
+
+			} finally {
 				if (verbose)
 					System.out.println("COMMITTING DELETION OF " + relCount + " RELATIONS.");
+				tx.commit();
 				if (verbose)
 					System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
-			} finally {
-				tx.commit();
+				
 			}
 
 			// REMOVING OF NODES
+			int nodeCount = 0;
 			tx = graphDB.beginTx();
 			try {
 				if (verbose)
 					System.out.print("REMOVING NODES...");
 				startTime = System.currentTimeMillis();
 				ResourceIterable<Node> nodeList = tx.getAllNodes();
-				int nodeCount = 0;
+				
 				for (Node nodetodelete : nodeList) {
 					nodeCount = nodeCount + 1;
 					nodetodelete.delete();
 				}
 				if (verbose)
 					System.out.println("REMOVED " + nodeCount + " NODES. THIS TOOK " + (System.currentTimeMillis() - startTime) + " ms.");
+
+//			startTime = System.currentTimeMillis();
+				
+			} finally {
 				if (verbose)
 					System.out.println("COMMITTING DELETION OF " + nodeCount + " NODES.");
-//			startTime = System.currentTimeMillis();
+				tx.commit();
 				if (verbose)
 					System.out.println("TOOK " + (System.currentTimeMillis() - startTime) + "ms.");
-			} finally {
-				tx.commit();
 			}
 		}
 	}
@@ -402,14 +425,14 @@ public class dataController {
 	 * This Method loads the file which is read by the reader-instance. It creates
 	 * nodes for all of them and adds them to the graph.
 	 * 
-	 * @param inputgraphDb
-	 * @param reader
-	 * @param headers
-	 * @param full_actor_list
-	 * @param full_director_list
-	 * @param full_company_list
-	 * @param full_genre_list
-	 * @param full_keyword_list
+	 * @param inputgraphDb - the database instance
+	 * @param reader - the appropriate readerinstance which opened the file
+	 * @param headers - the headerlist
+	 * @param full_actor_list - the list of actors which will be filled when reading the file
+	 * @param full_director_list - the list of directors which will be filled when reading the file
+	 * @param full_company_list - the list of companies which will be filled when reading the file
+	 * @param full_genre_list - the list of genres which will be filled when reading the file
+	 * @param full_keyword_list - the list of keywords which will be filled when reading the file
 	 * @throws IOException
 	 */
 	private void readFile(GraphDatabaseService inputgraphDb, BufferedReader reader, String[] headers, List<String> full_actor_list,
@@ -749,6 +772,13 @@ public class dataController {
 		}
 	}
 
+	/**
+	 * This method will cause the index-creation within the given database instance for the given identifier.
+	 * 
+	 * @param graphDB - the database instance which shall be used
+	 * @param identifier - identifier to decide which indizes shall be added
+	 * @param verbose - verbosity which will print out a little more output on what is happening
+	 */
 	public void createIndexes(GraphDatabaseService graphDB, String identifier, boolean verbose) {
 		if (identifier.equals("cooccs")) {
 			createIndexesCooccsDB(graphDB, verbose);
@@ -768,6 +798,12 @@ public class dataController {
 		}
 	}
 
+	/**
+	 * Create Indizes for label "PLZ" on "plz" for the general tests.
+	 * 
+	 * @param graphDB - the DB instance where there shall be indizes created
+	 * @param verbose - a little verbosity to see what is happening
+	 */
 	private void createIndexesGeoDB(GraphDatabaseService graphDB, boolean verbose) {
 		@SuppressWarnings("unused")
 		IndexDefinition userIndex;
@@ -783,6 +819,12 @@ public class dataController {
 		}
 	}
 
+	/**
+	 * Create Indizes for label "SINGLE_NODE" on "name" for the general tests.
+	 * 
+	 * @param graphDB - the DB instance where there shall be indizes created
+	 * @param verbose - a little verbosity to see what is happening
+	 */
 	private void createIndexesGeneralTests(GraphDatabaseService graphDB, boolean verbose) {
 		@SuppressWarnings("unused")
 		IndexDefinition userIndex;
@@ -832,7 +874,8 @@ public class dataController {
 	/**
 	 * This function creates the index of nodes for cooccs-db.
 	 * 
-	 * @param graphDB - database instance
+	 * @param graphDB - the DB instance where there shall be indizes created
+	 * @param verbose - a little verbosity to see what is happening
 	 */
 	@SuppressWarnings("unused")
 	public void createIndexesCooccsDB(GraphDatabaseService graphDB, boolean verbose) {
@@ -866,7 +909,8 @@ public class dataController {
 	/**
 	 * This function creates the index of userlist for deezer-db.
 	 * 
-	 * @param graphDB
+	 * @param graphDB - the DB instance where there shall be indizes created
+	 * @param verbose - a little verbosity to see what is happening
 	 */
 	public void createIndexesDeezerDB(GraphDatabaseService graphDB, boolean verbose) {
 		startTime = System.currentTimeMillis();
@@ -895,11 +939,10 @@ public class dataController {
 	 * This method creates indexes for actornames, movienames, keywords, genres,
 	 * directory and company-names.
 	 * 
-	 * @param graphDB
+	 * @param graphDB - hand over the database instance on which you want to create the indizes
+	 * @param verbose - little verbosity to see what is happening
 	 */
-	/**
-	 * @param graphDB
-	 */
+
 	public void createIndexesMovieDB(GraphDatabaseService graphDB, Boolean verbose) {
 		IndexDefinition actorNamesIndex, movieNameIndex, keywordIndex, genreIndex, directorIndex, companyIndex;
 		startTime = System.currentTimeMillis();
@@ -1247,17 +1290,17 @@ public class dataController {
 					String nodeName2 = edgeLine.split(",")[1];
 					Node firstNode = tx.findNode(currentLabel, "name", nodeName1);
 					Node secondNode = tx.findNode(currentLabel, "name", nodeName2);
+					int weight = Integer.parseInt(edgeLine.split(",")[2]);
+
 					@SuppressWarnings("unused")
 					Relationship relationship1 = firstNode.createRelationshipTo(secondNode, currentRelType);
 					if (weighted) {
-						int weight = Integer.parseInt(edgeLine.split(",")[2]);
 						relationship1.setProperty("weight", weight);
 					}
 					if (!directed) {
 						@SuppressWarnings("unused")
 						Relationship relationship2 = secondNode.createRelationshipTo(firstNode, currentRelType);
 						if (weighted) {
-							String weight = edgeLine.split(",")[2];
 							relationship2.setProperty("weight", weight);
 						}
 					}
@@ -1282,10 +1325,35 @@ public class dataController {
 
 	}
 
-	public void runCooccsImportByMethods(GraphDatabaseService graphDB, File inputfile, int periodicCommit, boolean verbose) {
+	/**
+	 * This method will load the cooccs-database from a given apoc-csv export.
+	 * @param graphDB - the database instance which shall be used
+	 * @param inputfile - the input file which shall be loaded. This file shall be a APOC-CSV export.
+	 * @param periodicCommit - shall there be a periodic commit? Number = 0 means no. Any other number will cause a periodic commit after every X lines. 
+	 * @param verbose - if true the method will give some output what is happening.
+	 */
+	public void runCooccsImportByMethods(GraphDatabaseService graphDB, File inputFile, int periodicCommit, boolean verbose) {
 		if (verbose)
 			System.out.println("LOADING COOCCS BY METHODS");
-		loadEdgeListbyMethods(graphDB, inputfile, ",", 0, "cooccs", true, true, periodicCommit, verbose);
+//		loadEdgeListbyMethods(graphDB, inputFile, ",", 0, "cooccs", true, true, periodicCommit, verbose);
+		
+		// there is the the same name for a function in NetworkX-tests.
+		create_graph_from_neo4j_csv(graphDB, inputFile, true, true, verbose);
+		
+	}
+
+	private void create_graph_from_neo4j_csv(GraphDatabaseService graphDB, File inputFile, Boolean inputDirectedData, Boolean outputDirectedGraph , boolean verbose) {
+		if (verbose) System.out.println("IMPORTING " + inputFile);
+		try {
+			String[] headers;
+			reader = new BufferedReader(new FileReader(inputFile));
+			headers = reader.readLine().split(",");
+					
+			reader.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	/**

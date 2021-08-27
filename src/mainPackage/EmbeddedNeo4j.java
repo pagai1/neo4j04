@@ -38,14 +38,14 @@ public class EmbeddedNeo4j {
 	private static final String homeDir = System.getProperty("user.home");
 
 	private static Boolean cleanAndCreate = true; // database will be cleared completely inclusive indized, then it will be created
-	private static Boolean roughCleanup = false; // database folders "database" and "transactions" will be deleted from filesystem
+	private static Boolean roughCleanup = true; // database folders "database" and "transactions" will be deleted from filesystem
 	// the following 3 variables are for the clearDB-test
 	private static Boolean clearDBTestByCypher = false; // database will be cleared by Cypher-commands
 	private static Boolean clearDBTestByOwn = false; // database will be cleared by own implementation using deletion of nodes and relations
 	private static Boolean clearDBTestByRoughDelete = false; // database folders "database" and "transactions" will be deleted from filesystem (same as roughcleanup from above)
 
 	private static Boolean doAlgo = false; // executing algo-tests
-	private static Boolean mainVerbose = false; // mainverbosity
+	private static Boolean mainVerbose = true; // mainverbosity
 	private static Boolean algoVerbose = false; // set verbosity for algorithm-test execution
 	private static Boolean doExport = false; // do an apoc-export (watch out that apoc-jar is located in plugins folder of DB)
 	private static Boolean clearAndCreateIndizesVerbose = mainVerbose; // additional verbosity for the clear-and-create part
@@ -54,17 +54,17 @@ public class EmbeddedNeo4j {
 	private static Boolean doShortestPath = false; // execute the shortestpath-algorithm part
 
 	// ########################################################
-////	// MOVIEDB
-	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
-	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
-	private static String identifier = "movie";
-	private static enums.Labels mainLabel = enums.Labels.PERSON;
-	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
-	private static String labelString = "PERSON";
-	private static String relationString = "ACTED_WITH";
-	private static int startRound = 5000;
-	private static int maxRounds = 5001;
-	private static int step = 2;
+////    MOVIEDB
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
+//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
+//	private static String identifier = "movie";
+//	private static enums.Labels mainLabel = enums.Labels.PERSON;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
+//	private static String labelString = "PERSON";
+//	private static String relationString = "ACTED_WITH";
+//	private static int startRound = 8000;
+//	private static int maxRounds = 10001;
+//	private static int step = 100;
 
 ////	EDGELIST
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
@@ -74,23 +74,23 @@ public class EmbeddedNeo4j {
 //	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
 //	private static String labelString = "USER";
 //	private static String relationString = "IS_FRIEND_OF";
-//	private static int startRound = 500000;
+//	private static int startRound = 25000;
 //	private static int maxRounds = 500001;
-//	private static int step = 2;
+//	private static int step = 25000;
 
 // COOCCSDB
-//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
-//	private static final File inputFile = new File(homeDir + "/graph-data/cooccs.csv");
-//	private static String identifier = "cooccs";
-//	private static enums.Labels mainLabel = enums.Labels.WORD;
-//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
-//	private static String labelString = "WORD";
-//	private static String relationString = "IS_CONNECTED";
-//	private static int startRound = 500000;
-//	private static int maxRounds = 500001;
-//	private static int step = 2;
+	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
+	private static final File inputFile = new File(homeDir + "/graph-data/cooccs.csv");
+	private static String identifier = "cooccs";
+	private static enums.Labels mainLabel = enums.Labels.WORD;
+	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
+	private static String labelString = "WORD";
+	private static String relationString = "IS_CONNECTED";
+	private static int startRound = 500000;
+	private static int maxRounds = 500001;
+	private static int step = 2;
 
-////GEO
+//// GEO
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/OSRM/").toPath();
 //	private static final File inputFile = new File(homeDir + "/graph-data/OSRM/final_semicolon.txt");
 //	private static String identifier = "geo";
@@ -192,6 +192,7 @@ public class EmbeddedNeo4j {
 	}
 
 	public static void main(String[] args) throws IOException {
+		// this makes it possible to overwrite the set parameters while starting the exported jar directly with inputparameters
 		if (args.length != 0) {
 			startRound = Integer.parseInt(args[0]);
 			maxRounds = Integer.parseInt(args[1]);
@@ -234,28 +235,33 @@ public class EmbeddedNeo4j {
 					myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0, true);
 					myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
 //					myDataController.clearDBByCypher(graphDB, clearAndCreateIndizesVerbose);
+					myDataController.printAll(graphDB, false);
 				}
 
 				if (createIndizes)
 					myDataController.createIndexes(graphDB, identifier, clearAndCreateIndizesVerbose);
 
-				long startTime2 = System.currentTimeMillis();
+//				long startTime2 = System.currentTimeMillis();
 
 				if (identifier.equals("movie")) {
 					myDataController.loadDataFromCSVFile(inputFile, ",", graphDB, false, round, true);
+					myDataController.runMovieDBImportByCypher(inputFile, 10000, true, true, 0);
 					myDataController.printAll(graphDB, false);
 				}
 
 				if (identifier.equals("deezer")) {
+					
 					myDataController.runDeezerImportByMethods(inputFile, identifier, ",", round, true, true, 10000, false);
 //					myDataController.runDeezerImportByCypher(inputFile, 10000, true, true, 0);
-//					myDataController.printAll(graphDB);
+					myDataController.printAll(graphDB,false);
 				}
 
 				if (identifier.equals("cooccs")) {
 					// this is normally not needed, or exeucted, as the DB will be imported from the
 					// NLP-toolbox-creation. :D
-					// myDataController.runCooccsImportByMethods(graphDB, inputFile, 0, true);
+					// the called method here is loading the given file from a apoc-CSV export. No available function to import exported stuff again.
+					myDataController.runCooccsImportByMethods(graphDB, inputFile, 0, true);
+					
 				}
 
 				if (identifier.equals("geo")) {
@@ -298,18 +304,27 @@ public class EmbeddedNeo4j {
 					getDataController();
 					myDataController.printAll(graphDB, false);
 					cleanup_start_time  = System.currentTimeMillis();
-					roughCleanup(false);
+					roughCleanup(true);
 					getDataController();
 					cleanup_end_time = System.currentTimeMillis();
 					System.out.println("ROUGH CLEANUP AND DB-reINIT TOOK: " + (cleanup_end_time - cleanup_start_time));
 					myDataController.printAll(graphDB, false);
 				}
 				if (clearDBTestByOwn) {
-					myDataController.clearDB(graphDB, clearAndCreateIndizesVerbose, 0, true);
+					getDataController();
+					myDataController.printAll(graphDB, false);
+					cleanup_start_time  = System.currentTimeMillis();
+					myDataController.clearDB(graphDB, true, 0, false);
 					myDataController.clearIndexes(graphDB, clearAndCreateIndizesVerbose);
+					cleanup_end_time = System.currentTimeMillis();
+					System.out.println("CLEANUP BY OWN METHODS TOOK: " + (cleanup_end_time - cleanup_start_time));
+
+					myDataController.printAll(graphDB, false);
+
 				}
 				
 				if (clearDBTestByCypher) {
+					getDataController();
 					myDataController.printAll(graphDB, false);
 					myDataController.clearDBByCypher(graphDB, clearAndCreateIndizesVerbose);
 					myDataController.printAll(graphDB, false);
