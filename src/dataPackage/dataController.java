@@ -21,6 +21,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterable;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
@@ -635,6 +636,7 @@ public class dataController {
 								@SuppressWarnings("unused")
 								Relationship relationshipMovie = (tx.findNode(Labels.PERSON, "name", actor)).createRelationshipTo(movieNode,
 										RelationshipTypes.ACTED_IN);
+								relationshipMovie.setProperty("weight", 1);
 								for (String actor2 : movieline[i].split("\\|")) {
 									if (!actor.equals(actor2)) {
 //										System.out.println("ADDING RELATION BETWEEN: " + actor + " AND " + actor2);
@@ -1374,7 +1376,7 @@ public class dataController {
 //		loadEdgeListbyMethods(graphDB, inputFile, ",", 0, "cooccs", true, true, periodicCommit, verbose);
 
 		// there is the the same name for a function in NetworkX-tests.
-		
+
 		long endTime = System.currentTimeMillis();
 		long startTime = System.currentTimeMillis();
 		create_graph_from_neo4j_csv(graphDB, inputFile, true, true, verbose);
@@ -1437,7 +1439,8 @@ public class dataController {
 			try (Transaction tx = graphDB.beginTx()) {
 
 				while (line != null) {
-					if (verbose) System.out.println(Arrays.toString(line));
+					if (verbose)
+						System.out.println(Arrays.toString(line));
 					if (!line[0].equals("")) {
 						if (verbose)
 							System.out.print("NODE - ");
@@ -1657,6 +1660,73 @@ public class dataController {
 			tx.commit();
 		}
 		System.out.println("EXECUTION TOOK " + (System.currentTimeMillis() - startTimeq1) + " ms.");
+	}
+
+	public void getAllNodes(GraphDatabaseService graphDB, Boolean fullContent) {
+		try (Transaction tx = graphDB.beginTx()) {
+			ResourceIterable<Node> allNodes = tx.getAllNodes();
+			long nodeCount = allNodes.stream().count();
+
+			if (fullContent) {
+				for (Node node : allNodes) {
+					Map<String, Object> properties = node.getAllProperties();
+					if (properties.isEmpty() || nodeCount == 0) {
+						System.out.println("NO NODES OR NO PROPS");
+					}
+				}
+			}
+			tx.close();
+		}
+	}
+
+	public void getAllEdges(GraphDatabaseService graphDB, Boolean fullContent) {
+		try (Transaction tx = graphDB.beginTx()) {
+			ResourceIterable<Relationship> allEdges = tx.getAllRelationships();
+			long edgeCount = allEdges.stream().count();
+			if (fullContent) {
+				for (Relationship edge : allEdges) {
+					Map<String, Object> properties = edge.getAllProperties();
+					if (properties.isEmpty() || edgeCount == 0) {
+						System.out.println("NO EDGES OR NO PROPS");
+					}
+				}
+			}
+			tx.close();
+		}
+	}
+
+	public ResourceIterator<Node> findSomeNode(GraphDatabaseService graphDB, enums.Labels label, Map<String, Object> properties, Boolean verbose) {
+		ResourceIterator<Node> ReturnNodeList = null;
+		if (properties != null) {
+			System.out.println("SEARCHING FOR " + label.name() + " AND " + properties.size() + " PROPERTIES");
+			try (Transaction tx = graphDB.beginTx()) {
+				ResourceIterator<Node> nodeList = null;
+				nodeList = tx.findNodes(label, properties);
+				while (nodeList.hasNext()) {
+					Node node = nodeList.next();
+					if (verbose) {
+						for (String property : node.getAllProperties().keySet()) {
+							System.out.print(node.getProperties(property));
+						}
+						System.out.println("");
+					}
+				}
+				tx.close();
+			}
+		} else {
+			System.out.println("SEARCHING FOR " + label.name() + " AND NO PROPERTIES");
+			try (Transaction tx = graphDB.beginTx()) {
+				ResourceIterator<Node> nodeList = null;
+				nodeList = tx.findNodes(label);
+				while (nodeList.hasNext()) {
+					Node node = nodeList.next();
+					System.out.println(node.getProperty("name"));
+				}
+				tx.close();
+			}
+		}
+		
+		return ReturnNodeList;
 	}
 
 	/**

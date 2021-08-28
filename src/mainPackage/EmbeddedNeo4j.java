@@ -4,6 +4,7 @@ import algoPackage.*;
 
 import java.lang.System;
 import java.nio.file.*;
+import java.util.HashMap;
 import java.util.Map;
 import enums.*;
 //import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -16,6 +17,8 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 
 import dataPackage.dataController;
@@ -37,15 +40,17 @@ public class EmbeddedNeo4j {
 
 	private static final String homeDir = System.getProperty("user.home");
 
-	private static Boolean cleanAndCreate = true; // database will be cleared completely inclusive indized, then it will be created
-	private static Boolean roughCleanup = true; // database folders "database" and "transactions" will be deleted from filesystem
+	private static Boolean cleanAndCreate = false; // database will be cleared completely inclusive indized, then it will be created
+	private static Boolean roughCleanup = false; // database folders "database" and "transactions" will be deleted from filesystem
 	// the following 3 variables are for the clearDB-test
 	private static Boolean clearDBTestByCypher = false; // database will be cleared by Cypher-commands
 	private static Boolean clearDBTestByOwn = false; // database will be cleared by own implementation using deletion of nodes and relations
 	private static Boolean clearDBTestByRoughDelete = false; // database folders "database" and "transactions" will be deleted from filesystem (same as roughcleanup from above)
 
+	private static Boolean getAllNodesAndAllEdgesTest = false; // will execute the test of getting nodes and edges. 
+	private static Boolean findSomeNodesTest = true; // will execute a test for finding nodes. Configuration done with call down below. 
 	private static Boolean doAlgo = false; // executing algo-tests
-	private static Boolean mainVerbose = true; // mainverbosity
+	private static Boolean mainVerbose = false; // mainverbosity
 	private static Boolean algoVerbose = false; // set verbosity for algorithm-test execution
 	private static Boolean doExport = false; // do an apoc-export (watch out that apoc-jar is located in plugins folder of DB)
 	private static Boolean clearAndCreateIndizesVerbose = mainVerbose; // additional verbosity for the clear-and-create part
@@ -55,16 +60,16 @@ public class EmbeddedNeo4j {
 
 	// ########################################################
 ////    MOVIEDB
-//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
-//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
-//	private static String identifier = "movie";
-//	private static enums.Labels mainLabel = enums.Labels.PERSON;
-//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
-//	private static String labelString = "PERSON";
-//	private static String relationString = "ACTED_WITH";
-//	private static int startRound = 8000;
-//	private static int maxRounds = 10001;
-//	private static int step = 100;
+	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
+	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
+	private static String identifier = "movie";
+	private static enums.Labels mainLabel = enums.Labels.PERSON;
+	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
+	private static String labelString = "PERSON";
+	private static String relationString = "ACTED_WITH";
+	private static int startRound = 10000;
+	private static int maxRounds = 10001;
+	private static int step = 100;
 
 ////	EDGELIST
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
@@ -79,16 +84,16 @@ public class EmbeddedNeo4j {
 //	private static int step = 25000;
 
 // COOCCSDB
-	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
-	private static final File inputFile = new File(databaseDirectory + "/cooccsdb.csv");
-	private static String identifier = "cooccs";
-	private static enums.Labels mainLabel = enums.Labels.WORD;
-	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
-	private static String labelString = "WORD";
-	private static String relationString = "IS_CONNECTED";
-	private static int startRound = 500000;
-	private static int maxRounds = 500001;
-	private static int step = 2;
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
+//	private static final File inputFile = new File(databaseDirectory + "/cooccsdb.csv");
+//	private static String identifier = "cooccs";
+//	private static enums.Labels mainLabel = enums.Labels.WORD;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
+//	private static String labelString = "WORD";
+//	private static String relationString = "IS_CONNECTED";
+//	private static int startRound = 500000;
+//	private static int maxRounds = 500001;
+//	private static int step = 2;
 
 //// GEO
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/OSRM/").toPath();
@@ -198,7 +203,7 @@ public class EmbeddedNeo4j {
 			maxRounds = Integer.parseInt(args[1]);
 			step = Integer.parseInt(args[2]);
 		}
-//		getDataController();
+		getDataController();
 
 		long startTime = System.currentTimeMillis();
 //		rounds is here taken to use increasing amount of data and make loops to keep it running to test different sizes. Used for example in general tests.
@@ -245,8 +250,10 @@ public class EmbeddedNeo4j {
 
 				if (identifier.equals("movie")) {
 					myDataController.loadDataFromCSVFile(inputFile, ",", graphDB, false, round, true);
-					myDataController.runMovieDBImportByCypher(inputFile, 10000, true, true, 0);
-					myDataController.printAll(graphDB, false);
+
+//					runMovieDBImportByCypher has to be implemented with correct CYPHER-command (optional!) 
+//					myDataController.runMovieDBImportByCypher(inputFile, 10000, true, true, 0);
+//					myDataController.printAll(graphDB, false);
 				}
 
 				if (identifier.equals("deezer")) {
@@ -331,6 +338,38 @@ public class EmbeddedNeo4j {
 					myDataController.printAll(graphDB, false);
 				}
 			}
+			
+			// get all nodes
+			if (getAllNodesAndAllEdgesTest) {
+				long endTime = System.currentTimeMillis();
+				startTime = System.currentTimeMillis();
+				myDataController.getAllNodes(graphDB, true);
+				endTime = System.currentTimeMillis();
+				System.out.print("GET ALL NODES TOOK: " + ((double)(endTime - startTime) / 1000.0) + "s");
+			}
+			
+			// get all edges
+			if (getAllNodesAndAllEdgesTest) {
+				long endTime = System.currentTimeMillis();
+				startTime = System.currentTimeMillis();
+				myDataController.getAllEdges(graphDB, true);
+				endTime = System.currentTimeMillis();
+				System.out.println("GET ALL EDGES TOOK: " + ((double)(endTime - startTime) / 1000.0) + "s");
+			}
+			
+			if (findSomeNodesTest) {
+				ResourceIterator<Node> nodeList;
+				long endTime = System.currentTimeMillis();
+				startTime = System.currentTimeMillis();
+				Map<String,Object> properties = new HashMap<String,Object>();
+				properties.put("release_year", "2015");
+				nodeList = myDataController.findSomeNode(graphDB, Labels.MOVIE, properties, false);
+				endTime = System.currentTimeMillis();
+				System.out.println("SEARCH TOOK: " + ((double)(endTime - startTime) / 1000.0) + "s");
+
+			}
+			
+			// start with algos and export?
 			if (doAlgo || doExport) {
 				if (mainVerbose)
 					System.out.println("######### STARTING ALGO OR EXPORT STUFF #########");
