@@ -63,8 +63,8 @@ public class EmbeddedNeo4j {
 	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
 	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
 	private static String identifier = "movie";
-	private static enums.Labels mainLabel = enums.Labels.PERSON;
-	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH;
+	private static enums.Labels mainLabel = enums.Labels.PERSON; // used in shortest path algo and some tests
+	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH; // used in shortest path algo
 	private static String labelString = "PERSON";
 	private static String relationString = "ACTED_WITH";
 	private static int startRound = 10000;
@@ -358,12 +358,11 @@ public class EmbeddedNeo4j {
 			}
 			
 			if (findSomeNodesTest) {
-				ResourceIterator<Node> nodeList;
 				long endTime = System.currentTimeMillis();
 				startTime = System.currentTimeMillis();
 				Map<String,Object> properties = new HashMap<String,Object>();
-				properties.put("release_year", "2015");
-				nodeList = myDataController.findSomeNode(graphDB, Labels.MOVIE, properties, false);
+				properties.put("ACTOR", true);
+				myDataController.findSomeNode(graphDB, Labels.PERSON, properties, false);
 				endTime = System.currentTimeMillis();
 				System.out.println("SEARCH TOOK: " + ((double)(endTime - startTime) / 1000.0) + "s");
 

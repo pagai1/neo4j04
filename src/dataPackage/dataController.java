@@ -1666,7 +1666,6 @@ public class dataController {
 		try (Transaction tx = graphDB.beginTx()) {
 			ResourceIterable<Node> allNodes = tx.getAllNodes();
 			long nodeCount = allNodes.stream().count();
-
 			if (fullContent) {
 				for (Node node : allNodes) {
 					Map<String, Object> properties = node.getAllProperties();
@@ -1695,12 +1694,12 @@ public class dataController {
 		}
 	}
 
-	public ResourceIterator<Node> findSomeNode(GraphDatabaseService graphDB, enums.Labels label, Map<String, Object> properties, Boolean verbose) {
-		ResourceIterator<Node> ReturnNodeList = null;
+	public void findSomeNode(GraphDatabaseService graphDB, enums.Labels label, Map<String, Object> properties, Boolean verbose) {
+		ResourceIterator<Node> nodeList = null;
+
 		if (properties != null) {
 			System.out.println("SEARCHING FOR " + label.name() + " AND " + properties.size() + " PROPERTIES");
 			try (Transaction tx = graphDB.beginTx()) {
-				ResourceIterator<Node> nodeList = null;
 				nodeList = tx.findNodes(label, properties);
 				while (nodeList.hasNext()) {
 					Node node = nodeList.next();
@@ -1709,6 +1708,8 @@ public class dataController {
 							System.out.print(node.getProperties(property));
 						}
 						System.out.println("");
+					} else {
+						System.out.println("FOUND:" + nodeList.stream().count());
 					}
 				}
 				tx.close();
@@ -1716,17 +1717,26 @@ public class dataController {
 		} else {
 			System.out.println("SEARCHING FOR " + label.name() + " AND NO PROPERTIES");
 			try (Transaction tx = graphDB.beginTx()) {
-				ResourceIterator<Node> nodeList = null;
+				nodeList = null;
 				nodeList = tx.findNodes(label);
+
 				while (nodeList.hasNext()) {
 					Node node = nodeList.next();
-					System.out.println(node.getProperty("name"));
+					if (verbose) {
+						for (String property : node.getAllProperties().keySet()) {
+							System.out.print(node.getProperties(property));
+						}
+						System.out.println("");
+					} else {
+						System.out.println("FOUND: " + nodeList.stream().count());
+					}
+
 				}
+
 				tx.close();
 			}
 		}
-		
-		return ReturnNodeList;
+
 	}
 
 	/**
