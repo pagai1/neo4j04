@@ -77,7 +77,8 @@ public class ShortestPathAnalysis {
 	}
 
 	/**
-	 * Method gets all shortest paths between all nodes
+	 * Method gets all shortest paths between all nodes.
+	 * The a-star algorithm is only working by using geographic data.
 	 * 
 	 * @param label            - Which label shall have the nodes?
 	 * @param relationShipType - which relationship type shall be used in
@@ -87,6 +88,7 @@ public class ShortestPathAnalysis {
 	 * @param verbose          - give output with informations about paths
 	 */
 	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType, String method, boolean verbose) {
+		pathCounter=0;
 		fullStartTime = System.currentTimeMillis();
 		if (verbose)
 			System.out.println("SHORTEST PATH - " + method + " - CREATING PATHFINDERS...");
@@ -102,18 +104,18 @@ public class ShortestPathAnalysis {
 			int nodeCount = nodeList.size();
 			if (verbose)
 				System.out.println("FOUND " + nodeCount + " NODES.");
-
+		
 			if (method == "regular") {
 				startTime = System.currentTimeMillis();
 				PathFinder<Path> finderShortestPath = GraphAlgoFactory.shortestPath(new BasicEvaluationContext(tx, graphDB),
-						PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), 50);
+						PathExpanders.forTypeAndDirection(relationShipType, Direction.OUTGOING), 50);
 				for (int i = 0; i < nodeCount; i++) {
 					Node startNode = nodeList.get(i);
 					for (int j = 0; j < nodeCount; j++) {
 						Node endNode = nodeList.get(j);
 						if (endNode.getId() != startNode.getId()) {
 							executeFinderShortestPath(startNode, endNode, finderShortestPath, verbose);
-							if (pathCounter++ % 1000 == 0) {
+							if (pathCounter++ % 1000 == 0 && verbose) {
 								System.out.println("COUNTER: " + pathCounter);
 
 							}
@@ -125,20 +127,20 @@ public class ShortestPathAnalysis {
 			if (method == "dijkstra") {
 				startTime = System.currentTimeMillis();
 				PathFinder<WeightedPath> finderDijkstra = GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
-						PathExpanders.forTypeAndDirection(relationShipType, Direction.BOTH), "weight");
+						PathExpanders.forTypeAndDirection(relationShipType, Direction.OUTGOING), "weight");
 				for (int i = 0; i < nodeCount; i++) {
 					Node startNode = nodeList.get(i);
 					for (int j = 0; j < nodeCount; j++) {
 						Node endNode = nodeList.get(j);
 						if (endNode.getId() != startNode.getId()) {
 							executeFinderDijkstra(startNode, endNode, finderDijkstra, verbose);
-							if (pathCounter++ % 1000 == 0) {
+							if (pathCounter++ % 1000 == 0 && verbose) {
 								System.out.println("COUNTER: " + pathCounter);
-
 							}
 						}
 					}
 				}
+				
 			}
 
 			if (method == "astar") {
@@ -179,7 +181,7 @@ public class ShortestPathAnalysis {
 			// Returns an algorithm which can find all shortest paths (that is paths with as
 			// short Path.length() as possible) between two nodes.
 
-			System.out.println("ALL SHORTEST PATHS FOR " + nodeCount + " NODES AND " + edgeCount + " EDGES ENDED IN: "
+			System.out.println("ALL SHORTEST PATHS ("+ pathCounter +") FOR " + nodeCount + " NODES AND " + edgeCount + " EDGES ENDED IN: "
 					+ (System.currentTimeMillis() - startTime) + "ms.");
 
 		}

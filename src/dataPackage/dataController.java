@@ -235,12 +235,10 @@ public class dataController {
 			int periodicCommit, boolean verbose) {
 		if (verbose)
 			System.out.println("LOADING EDGELIST BY METHODS");
-		long endTime = System.currentTimeMillis();
-		long startTime = System.currentTimeMillis();
+		
 		loadEdgeListbyMethods(graphDB, inputFile, delimiter, limit, identifier, weighted, directed, periodicCommit, verbose);
-		endTime = System.currentTimeMillis();
 //		System.out.printf("%.9f s.\n", (double) ((System.nanoTime() - startTimeSingle) / 1000.0));
-		System.out.println((endTime - startTime) / 1000.0);
+		
 	}
 
 	public int getNumberOfLines(File inputFile) throws IOException {
@@ -547,8 +545,11 @@ public class dataController {
 				}
 //				System.out.println(personMap);
 //				personMap.put("roles", roleList);
+				boolean bums = false;
 				if (!checkIfExists("name", value, Labels.PERSON)) {
+
 					addSingleNode(tx, Labels.PERSON, "name", value, personMap);
+
 				} else {
 					System.out.println("NODE: " + value + " ALREADY IN GRAPH");
 				}
@@ -702,13 +703,21 @@ public class dataController {
 	private void addSingleNode(Transaction tx, enums.Labels label, String nameProperty, String nodeName, HashMap<String, Boolean> properties) {
 		Node node = tx.createNode(label);
 		node.setProperty(nameProperty, nodeName);
+		node.setProperty("number", (System.currentTimeMillis() % 100));
 		if (properties != null) {
 			Iterator<?> propertyIterator = properties.entrySet().iterator();
 			while (propertyIterator.hasNext()) {
 				@SuppressWarnings("rawtypes")
 				HashMap.Entry propertyEntry = (HashMap.Entry) propertyIterator.next();
 				node.setProperty((String) propertyEntry.getKey(), propertyEntry.getValue());
+				if (propertyEntry.getKey() == "ACTOR") {
+					if ((Boolean) propertyEntry.getValue() == true) {
+						node.addLabel(enums.Labels.ACTOR);
+					}
+				}
+
 			}
+
 		}
 	}
 
@@ -1198,8 +1207,10 @@ public class dataController {
 	@SuppressWarnings("resource")
 	public void loadEdgeListbyMethods(GraphDatabaseService graphDB, File inputFile, String delimiter, int limit, String identifier, boolean weighted,
 			boolean directed, int periodicCommit, boolean verbose) {
+		long startTimeAll=System.currentTimeMillis();
+
 		Labels currentLabel = null;
-		RelationshipTypes currentRelType = null;
+		RelationshipTypes currentRelType = RelationshipTypes.IS_FRIEND_OF;
 		if (identifier.equals("cooccs")) {
 			currentLabel = Labels.WORD;
 			currentRelType = RelationshipTypes.IS_CONNECTED;
@@ -1244,6 +1255,13 @@ public class dataController {
 			List<String> full_node_list_unique = full_node_list.stream().distinct().collect(Collectors.toList());
 //			System.out.println("FULL UNIQUE LIST: " + full_node_list_unique.size());
 			int nodeCount = 0;
+
+			
+			long createEdgeStartTime = System.currentTimeMillis(); 
+			long createEdgeEndTime = System.currentTimeMillis();
+			long createNodeStartTime = System.currentTimeMillis();
+			long createNodeEndTime = System.currentTimeMillis();
+			
 			try (Transaction tx = graphDB.beginTx()) {
 				if (verbose)
 					System.out.println("STARTING TRANSACTION...");
@@ -1256,6 +1274,8 @@ public class dataController {
 				if (verbose)
 					System.out.println("ADDED " + nodeCount + " NODES BY METHOD. " + (System.currentTimeMillis() - startTime1) + "ms.");
 			}
+			createNodeEndTime = System.currentTimeMillis();
+			long createNodeRunTime = (createNodeEndTime - createNodeStartTime);
 			// Loading Lines to create relations
 			reader2 = new BufferedReader(new FileReader(inputFile));
 
@@ -1298,7 +1318,7 @@ public class dataController {
 			int lineCounter = 0;
 			if (verbose)
 				System.out.println("ADDING EDGES...");
-			long startTime2 = System.currentTimeMillis();
+			createEdgeStartTime = System.currentTimeMillis();
 			Transaction tx = graphDB.beginTx();
 			try {
 				String edgeLine = reader2.readLine();
@@ -1335,16 +1355,21 @@ public class dataController {
 					edgeLine = reader2.readLine();
 				}
 
-				if (verbose)
-					System.out.println("ADDED " + lineCounter + " LINES BY METHOD. " + (System.currentTimeMillis() - startTime2) + "ms.");
+
 
 			} finally {
 				tx.commit();
 			}
+			createEdgeEndTime = System.currentTimeMillis();
+			long createEdgeRunTime= (createEdgeEndTime - createEdgeStartTime);
+			if (verbose)
+				System.out.println("ADDED " + lineCounter + " LINES BY METHOD. " + (System.currentTimeMillis() - createEdgeStartTime) + "ms.");
+			
 			reader2.close();
 
 			if (verbose)
-				System.out.println("# IMPORT VIA METHOD TOOK: " + (System.currentTimeMillis() - startTime) + "ms.");
+				System.out.println("# IMPORT VIA METHOD TOOK: " + (createNodeRunTime + createEdgeRunTime) + "ms.");
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
