@@ -788,7 +788,7 @@ public class dataController {
 			while (edgeIterator.hasNext()) {
 				Relationship edgeFromList = edgeIterator.next();
 				if (moreDetails) {
-					System.out.print("EDGE ## FROM: " + edgeFromList.getStartNode().getProperty("name") + " TO: "
+					System.out.print("EDGE ## (ID: "+ edgeFromList.getId() + " FROM: " + edgeFromList.getStartNode().getProperty("name") + " TO: "
 							+ edgeFromList.getEndNode().getProperty("name"));
 					for (Entry<String, Object> bums : edgeFromList.getAllProperties().entrySet()) {
 						System.out.print(bums.getKey() + ": " + bums.getValue() + " - ");
@@ -1488,7 +1488,10 @@ public class dataController {
 						Relationship relationship1 = (tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 2])
 								.createRelationshipTo(tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 1]), edgeLabel));
 						for (int j = index_first_edge_attribute; j < line.length; j++) {
-							relationship1.setProperty(headers[j], line[j]);
+							relationship1.setProperty(headers[j].replace("\"", ""), line[j].replace("\"", ""));
+							if (verbose) {
+								System.out.println(" " + headers[j] + " = " + line[j]);
+							}
 						}
 						if (verbose)
 							System.out.println(

@@ -48,13 +48,14 @@ public class ExecutionEngine {
 				printResult(tx.execute(query), extraLinebreak, extraField, false);
 			} else {
 				Result result = tx.execute(query);
-				result.next();
-//				while (result.hasNext()) {
+				
+				while (result.hasNext()) {
 //					Map<String, Object> row = result.next();
 //					for (Entry<String, Object> column : row.entrySet()) {
 //						rows += column.getKey() + ": " + column.getValue();
 //					}
-//				}
+					result.next();
+				}
 			}
 
 //			while (result.hasNext()) {

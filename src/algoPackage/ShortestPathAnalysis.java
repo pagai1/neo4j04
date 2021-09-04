@@ -22,6 +22,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 import enums.Labels;
+import enums.RelationshipTypes;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -32,6 +33,8 @@ public class ShortestPathAnalysis {
 	private static GraphDatabaseService graphDB;
 	private static long startTime;
 	private static double startTimeSingle;
+	private static double endTimeSingle;
+	private static double calcFullTime;
 	private static long fullStartTime;
 	private static int pathCounter = 0;
 
@@ -87,9 +90,13 @@ public class ShortestPathAnalysis {
 	 *                         "dijkstra" or "astar" possible
 	 * @param verbose          - give output with informations about paths
 	 */
-	public void getAllShortestPaths(Labels label, enums.RelationshipTypes relationShipType, String method, boolean verbose) {
+	public void getAllShortestPaths(Labels label, RelationshipTypes relationShipType, String method, boolean verbose) {
 		pathCounter=0;
+		calcFullTime = 0.0;
 		fullStartTime = System.currentTimeMillis();
+		String weightString = "weight";
+		if (relationShipType == RelationshipTypes.IS_CONNECTED) weightString = "count";
+				
 		if (verbose)
 			System.out.println("SHORTEST PATH - " + method + " - CREATING PATHFINDERS...");
 		try (Transaction tx = graphDB.beginTx()) {
@@ -115,32 +122,41 @@ public class ShortestPathAnalysis {
 						Node endNode = nodeList.get(j);
 						if (endNode.getId() != startNode.getId()) {
 							executeFinderShortestPath(startNode, endNode, finderShortestPath, verbose);
-							if (pathCounter++ % 1000 == 0 && verbose) {
+							pathCounter++;
+							if (pathCounter % 1000 == 0 && verbose) {
 								System.out.println("COUNTER: " + pathCounter);
-
 							}
 						}
 					}
+					if (verbose) System.out.printf("AVERAGE TIME PER PATH: %.9f s.\n", (double) (calcFullTime / pathCounter / 1000000000.0));
+
+//					if (verbose) System.out.println("AVERAGE TIME PER PATH: " + (double) (calcFullTime / pathCounter) + " ns" );	
 				}
+				if (!verbose) System.out.printf("AVERAGE TIME PER PATH: %.9f s.\n", (double) (calcFullTime / pathCounter / 1000000000.0));
 			}
 
 			if (method == "dijkstra") {
 				startTime = System.currentTimeMillis();
 				PathFinder<WeightedPath> finderDijkstra = GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
-						PathExpanders.forTypeAndDirection(relationShipType, Direction.OUTGOING), "weight");
+						PathExpanders.forTypeAndDirection(relationShipType, Direction.OUTGOING), weightString);
 				for (int i = 0; i < nodeCount; i++) {
 					Node startNode = nodeList.get(i);
 					for (int j = 0; j < nodeCount; j++) {
 						Node endNode = nodeList.get(j);
 						if (endNode.getId() != startNode.getId()) {
 							executeFinderDijkstra(startNode, endNode, finderDijkstra, verbose);
-							if (pathCounter++ % 1000 == 0 && verbose) {
+							pathCounter++;
+							if (pathCounter % 1000 == 0 && verbose) {
 								System.out.println("COUNTER: " + pathCounter);
 							}
 						}
+
 					}
+					if (verbose) System.out.printf("AVERAGE TIME PER PATH: %.9f s.\n", (double) (calcFullTime / pathCounter / 1000000000.0));
+//					if (verbose) System.out.println("AVERAGE TIME PER PATH: " + (double) ((endTimeSingle - startTimeSingle) / 1000000000.0) + " s"  );
+					
 				}
-				
+				if (!verbose) System.out.println("AVERAGE TIME PER PATH: " + (double) (calcFullTime / (pathCounter) / 1000000000.0) + " s"  );
 			}
 
 			if (method == "astar") {
@@ -228,10 +244,12 @@ public class ShortestPathAnalysis {
 	public void executeFinderShortestPath(Node startNode, Node endNode, PathFinder<Path> finderShortestPath, boolean verbose) {
 		startTimeSingle = System.nanoTime();
 		Path singleShortestPath = finderShortestPath.findSinglePath(startNode, endNode);
+		endTimeSingle = System.nanoTime();
 		if (verbose) {
 			print_path(singleShortestPath, startNode, endNode);
-			System.out.printf("%.9f s.\n", (double) ((System.nanoTime() - startTimeSingle) / 1000000000.0));
+			System.out.printf("%.9f s.\n", (double) ((endTimeSingle - startTimeSingle) / 1000000000.0));
 		}
+		calcFullTime = calcFullTime + (endTimeSingle - startTimeSingle);
 //
 //		if (singleShortestPath != null) {
 //			System.out.print("### shortestPath ### FOUND SHORTESTPATH IN " + (System.currentTimeMillis() - startTime)
@@ -269,14 +287,18 @@ public class ShortestPathAnalysis {
 	 * @param startNode      - the startnode of the path
 	 * @param endNode        - the endnode of the path
 	 * @param finderDijkstra - the finderalgorithm
+	 * @param verbose		 - prints out all paths with single calctime in seconds using System.nanoTime() / 1000000000.0
 	 */
 	public void executeFinderDijkstra(Node startNode, Node endNode, PathFinder<WeightedPath> finderDijkstra, Boolean verbose) {
 		startTimeSingle = System.nanoTime();
 		Path singlePathDijkstra = finderDijkstra.findSinglePath(startNode, endNode);
+		endTimeSingle = System.nanoTime();
+		System.out.println(endTimeSingle);
 		if (verbose) {
 			print_path(singlePathDijkstra, startNode, endNode);
-			System.out.printf("%.9f s.\n", (double) ((System.nanoTime() - startTimeSingle) / 1000000000.0));
+			System.out.printf("%.9f s.\n", (double) ((endTimeSingle - startTimeSingle) / 1000000000.0));
 		}
+		calcFullTime = calcFullTime + ((endTimeSingle - startTimeSingle) / 1000000000.0 );
 	}
 
 	public void findShortestPathByCypher(String nodeName1, String nodeName2) {
