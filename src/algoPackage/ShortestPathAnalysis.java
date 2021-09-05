@@ -16,6 +16,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpander;
 import org.neo4j.graphdb.PathExpanders;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Result;
@@ -92,7 +93,6 @@ public class ShortestPathAnalysis {
 	 */
 	public void getAllShortestPaths(Labels label, RelationshipTypes relationShipType, String method, boolean verbose) {
 		pathCounter=0;
-		calcFullTime = 0.0;
 		fullStartTime = System.currentTimeMillis();
 		String weightString = "weight";
 		if (relationShipType == RelationshipTypes.IS_CONNECTED) weightString = "count";
@@ -114,6 +114,7 @@ public class ShortestPathAnalysis {
 		
 			if (method == "regular") {
 				startTime = System.currentTimeMillis();
+				calcFullTime = 0.0;
 				PathFinder<Path> finderShortestPath = GraphAlgoFactory.shortestPath(new BasicEvaluationContext(tx, graphDB),
 						PathExpanders.forTypeAndDirection(relationShipType, Direction.OUTGOING), 50);
 				for (int i = 0; i < nodeCount; i++) {
@@ -136,6 +137,7 @@ public class ShortestPathAnalysis {
 			}
 
 			if (method == "dijkstra") {
+				calcFullTime = 0.0;
 				startTime = System.currentTimeMillis();
 				PathFinder<WeightedPath> finderDijkstra = GraphAlgoFactory.dijkstra(new BasicEvaluationContext(tx, graphDB),
 						PathExpanders.forTypeAndDirection(relationShipType, Direction.OUTGOING), weightString);
@@ -160,6 +162,7 @@ public class ShortestPathAnalysis {
 			}
 
 			if (method == "astar") {
+				calcFullTime = 0.0;
 				startTime = System.currentTimeMillis();
 				// Estimateevaluator picks distance between nodes in
 				// Is multiplied by 10000 to have a better weight in calculation. x.y < xxxx.y
@@ -249,7 +252,7 @@ public class ShortestPathAnalysis {
 			print_path(singleShortestPath, startNode, endNode);
 			System.out.printf("%.9f s.\n", (double) ((endTimeSingle - startTimeSingle) / 1000000000.0));
 		}
-		calcFullTime = calcFullTime + (endTimeSingle - startTimeSingle);
+		calcFullTime = calcFullTime + ((endTimeSingle - startTimeSingle) );
 //
 //		if (singleShortestPath != null) {
 //			System.out.print("### shortestPath ### FOUND SHORTESTPATH IN " + (System.currentTimeMillis() - startTime)
@@ -298,7 +301,7 @@ public class ShortestPathAnalysis {
 			print_path(singlePathDijkstra, startNode, endNode);
 			System.out.printf("%.9f s.\n", (double) ((endTimeSingle - startTimeSingle) / 1000000000.0));
 		}
-		calcFullTime = calcFullTime + ((endTimeSingle - startTimeSingle) / 1000000000.0 );
+		calcFullTime = calcFullTime + (endTimeSingle - startTimeSingle);
 	}
 
 	public void findShortestPathByCypher(String nodeName1, String nodeName2) {

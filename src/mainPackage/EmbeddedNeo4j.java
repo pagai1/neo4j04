@@ -52,14 +52,14 @@ public class EmbeddedNeo4j {
 	private static Boolean findSomeNodesTest = false; // will execute a test for finding nodes. Configuration done with call down
 														// below.
 
-	private static Boolean mainVerbose = true; // mainverbosity
+	private static Boolean mainVerbose = false; // mainverbosity
 	private static Boolean clearAndCreateIndizesVerbose = mainVerbose; // additional verbosity for the clear-and-create part
 	private static Boolean doExport = false; // do an apoc-export (watch out that apoc-jar is located in plugins folder of DB)
 
 	private static Boolean doAlgo = true; // executing algo-tests
 	private static Boolean algoVerbose = false; // set verbosity for algorithm-test execution
-	private static Boolean doPageRank = false; // execute the pagerank-algorithm part
-	private static Boolean doShortestPath = true; // execute the shortestpath-algorithm part
+	private static Boolean doPageRank = true; // execute the pagerank-algorithm part
+	private static Boolean doShortestPath = false; // execute the shortestpath-algorithm part
 	private static Boolean doCypherTests = false;
 	// ########################################################
 ////    MOVIEDB
@@ -68,35 +68,35 @@ public class EmbeddedNeo4j {
 //	private static String identifier = "movie";
 //	private static enums.Labels mainLabel = enums.Labels.ACTOR; // used in shortest path algo and some tests
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH; // used in shortest path algo
-//	private static String labelString = "PERSON";
+//	private static String labelString = "ACTOR";
 //	private static String relationString = "ACTED_WITH";
-//	private static int startRound = 50;
-//	private static int maxRounds = 51;
-//	private static int step = 2;
+//	private static int startRound = 500;
+//	private static int maxRounds = 10001;
+//	private static int step = 500;
 
 ////	EDGELIST
-//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
-//	private static final File inputFile = new File(homeDir + "/graph-data/pokec/soc-pokec-relationships_weighted.txt");
-//	private static String identifier = "deezer";
-//	private static Labels mainLabel = Labels.USER;
-//	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
-//	private static String labelString = "USER";
-//	private static String relationString = "IS_FRIEND_OF";
-//	private static int startRound = 100;
-//	private static int maxRounds = 10000;
-//	private static int step = 100;
+	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
+	private static final File inputFile = new File(homeDir + "/graph-data/pokec/soc-pokec-relationships_weighted.txt");
+	private static String identifier = "deezer";
+	private static Labels mainLabel = Labels.USER;
+	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
+	private static String labelString = "USER";
+	private static String relationString = "IS_FRIEND_OF";
+	private static int startRound = 25000;
+	private static int maxRounds = 1000001;
+	private static int step = 25000;
 
 // COOCCSDB
-	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
-	private static final File inputFile = new File(databaseDirectory + "/cooccsdb.csv");
-	private static String identifier = "cooccs";
-	private static enums.Labels mainLabel = enums.Labels.WORD;
-	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
-	private static String labelString = "WORD";
-	private static String relationString = "IS_CONNECTED";
-	private static int startRound = 500000;
-	private static int maxRounds = 500001;
-	private static int step = 2;
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
+//	private static final File inputFile = new File(databaseDirectory + "/cooccsdb.csv");
+//	private static String identifier = "cooccs";
+//	private static enums.Labels mainLabel = enums.Labels.WORD;
+//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
+//	private static String labelString = "WORD";
+//	private static String relationString = "IS_CONNECTED";
+//	private static int startRound = 500000;
+//	private static int maxRounds = 500001;
+//	private static int step = 2;
 
 //// GEO
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/OSRM/").toPath();
@@ -206,6 +206,11 @@ public class EmbeddedNeo4j {
 			maxRounds = Integer.parseInt(args[1]);
 			step = Integer.parseInt(args[2]);
 		}
+		if (maxRounds <= startRound) {
+			System.out.println("PLEASE CHECK INPUT-PARAMETERS, maxRounds lower or equal to startRound.");
+			System.exit(1);
+		}
+		
 		getDataController();
 
 		long startTime = System.currentTimeMillis();
@@ -390,8 +395,8 @@ public class EmbeddedNeo4j {
 				 */
 				if (doShortestPath) {
 					ShortestPathAnalysis SPAnalysis = new ShortestPathAnalysis(graphDB);
-					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular", false);
-//					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra", false);
+//					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "regular", false);
+					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "dijkstra", false);
 //					SPAnalysis.getAllShortestPaths(mainLabel, mainRelation, "astar", algoVerbose);
 
 //					SPAnalysis.getShortestPath(enums.Labels.USER, "5", enums.Labels.USER, "134", enums.RelationshipTypes.IS_FRIEND_OF);
@@ -403,7 +408,6 @@ public class EmbeddedNeo4j {
 				 * PAGERANK
 				 */
 				if (doPageRank) {
-
 					PageRankAnalysis PRAnalysis = new PageRankAnalysis(graphDB);
 					// weightstring is used to create subgraph with property on relation
 					// also it is used to call pagerank with use attribute in calculation.
@@ -418,7 +422,7 @@ public class EmbeddedNeo4j {
 						weightString = "weight";
 					}
 //				algoVerbose = false;
-					PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, weightString, false, algoVerbose, 0);
+					PRAnalysis.createSubgraphAndExecutePageRank("SUBGRAPH", labelString, relationString, weightString, true, algoVerbose, 0);
 				}
 				/**
 				 * DEGREE CENTRALITY
