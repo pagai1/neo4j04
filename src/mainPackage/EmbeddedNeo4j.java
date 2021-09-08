@@ -40,13 +40,17 @@ public class EmbeddedNeo4j {
 
 	private static final String homeDir = System.getProperty("user.home");
 //	private static final String homeDir = "/tmp/graph-data/";
-	
-	private static Boolean cleanAndCreate = true; // database will be cleared completely inclusive indized, then it will be created
-	private static Boolean roughCleanup = true; // database folders "database" and "transactions" will be deleted from filesystem
+
+	private static Boolean cleanAndCreate = true; // database will be cleared completely inclusive indized, then it will be
+													// created
+	private static Boolean roughCleanup = true; // database folders "database" and "transactions" will be deleted from
+												// filesystem
 	// the following 3 variables are for the clearDB-test
 	private static Boolean clearDBTestByCypher = false; // database will be cleared by Cypher-commands
-	private static Boolean clearDBTestByOwn = false; // database will be cleared by own implementation using deletion of nodes and relations
-	private static Boolean clearDBTestByRoughDelete = false; // database folders "database" and "transactions" will be deleted from filesystem (same as roughcleanup from above)
+	private static Boolean clearDBTestByOwn = false; // database will be cleared by own implementation using deletion of nodes and
+														// relations
+	private static Boolean clearDBTestByRoughDelete = false; // database folders "database" and "transactions" will be deleted from
+																// filesystem (same as roughcleanup from above)
 
 	private static Boolean getAllNodesAndAllEdgesTest = false; // will execute the test of getting nodes and edges.
 	private static Boolean findSomeNodesTest = false; // will execute a test for finding nodes. Configuration done with call down
@@ -54,37 +58,39 @@ public class EmbeddedNeo4j {
 
 	private static Boolean mainVerbose = false; // mainverbosity
 	private static Boolean clearAndCreateIndizesVerbose = mainVerbose; // additional verbosity for the clear-and-create part
-	private static Boolean doExport = false; // do an apoc-export (watch out that apoc-jar is located in plugins folder of DB)
+	private static Boolean doExport = false; // do an apoc-export (watch out that apoc-jar is located in plugins folder of
+												// DB)
 
-	private static Boolean doAlgo = true; // executing algo-tests
+	private static Boolean doAlgo = true; // executing the algo-tests if enabled
 	private static Boolean algoVerbose = false; // set verbosity for algorithm-test execution
-	private static Boolean doPageRank = true; // execute the pagerank-algorithm part
+	private static Boolean doPageRank = false; // execute the pagerank-algorithm part
 	private static Boolean doShortestPath = false; // execute the shortestpath-algorithm part
-	private static Boolean doCypherTests = false;
+	private static Boolean doDegreeCentrality = false; // execute the degreecentrality algorithm part
+	private static Boolean doCypherTests = true;
 	// ########################################################
 ////    MOVIEDB
-//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
-//	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
-//	private static String identifier = "movie";
-//	private static enums.Labels mainLabel = enums.Labels.ACTOR; // used in shortest path algo and some tests
-//	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH; // used in shortest path algo
-//	private static String labelString = "ACTOR";
-//	private static String relationString = "ACTED_WITH";
-//	private static int startRound = 500;
-//	private static int maxRounds = 10001;
-//	private static int step = 500;
+	private static final Path databaseDirectory = new File(homeDir + "/graph-data/owndb01/").toPath();
+	private static final File inputFile = new File(homeDir + "/graph-data/tmdb_fixed.csv");
+	private static String identifier = "movie";
+	private static enums.Labels mainLabel = enums.Labels.ACTOR; // used in shortest path algo and some tests
+	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.ACTED_WITH; // used in shortest path algo
+	private static String labelString = "ACTOR";
+	private static String relationString = "ACTED_WITH";
+	private static int startRound = 100;
+	private static int maxRounds = 10001;
+	private static int step = 100;
 
 ////	EDGELIST
-	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
-	private static final File inputFile = new File(homeDir + "/graph-data/pokec/soc-pokec-relationships_weighted.txt");
-	private static String identifier = "deezer";
-	private static Labels mainLabel = Labels.USER;
-	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
-	private static String labelString = "USER";
-	private static String relationString = "IS_FRIEND_OF";
-	private static int startRound = 25000;
-	private static int maxRounds = 1000001;
-	private static int step = 25000;
+//	private static final Path databaseDirectory = new File(homeDir + "/graph-data/deezerdb/").toPath();
+//	private static final File inputFile = new File(homeDir + "/graph-data/pokec/soc-pokec-relationships_weighted.txt");
+//	private static String identifier = "deezer";
+//	private static Labels mainLabel = Labels.USER;
+//	private static RelationshipTypes mainRelation = RelationshipTypes.IS_FRIEND_OF;
+//	private static String labelString = "USER";
+//	private static String relationString = "IS_FRIEND_OF";
+//	private static int startRound = 25000;
+//	private static int maxRounds = 1000001;
+//	private static int step = 25000;
 
 // COOCCSDB
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/cooccsdatabase/").toPath();
@@ -94,9 +100,9 @@ public class EmbeddedNeo4j {
 //	private static enums.RelationshipTypes mainRelation = enums.RelationshipTypes.IS_CONNECTED;
 //	private static String labelString = "WORD";
 //	private static String relationString = "IS_CONNECTED";
-//	private static int startRound = 500000;
-//	private static int maxRounds = 500001;
-//	private static int step = 2;
+//	private static int startRound = 10;
+//	private static int maxRounds = 11;
+//	private static int step = 12;
 
 //// GEO
 //	private static final Path databaseDirectory = new File(homeDir + "/graph-data/OSRM/").toPath();
@@ -210,7 +216,7 @@ public class EmbeddedNeo4j {
 			System.out.println("PLEASE CHECK INPUT-PARAMETERS, maxRounds lower or equal to startRound.");
 			System.exit(1);
 		}
-		
+
 		getDataController();
 
 		long startTime = System.currentTimeMillis();
@@ -268,7 +274,7 @@ public class EmbeddedNeo4j {
 
 					myDataController.runDeezerImportByMethods(inputFile, identifier, ",", round, true, true, 10000, mainVerbose);
 //					myDataController.runDeezerImportByCypher(inputFile, 10000, true, true, 0);
-					myDataController.printAll(graphDB,false);
+					myDataController.printAll(graphDB, false);
 				}
 
 				if (identifier.equals("cooccs")) {
@@ -427,10 +433,12 @@ public class EmbeddedNeo4j {
 				/**
 				 * DEGREE CENTRALITY
 				 */
-
-//				DegreeCentralityAnalysis DCAnalysis= new DegreeCentralityAnalysis(graphDB);
-//				DCAnalysis.getDegreeCentrality(graphDB,true);
-
+				if (doDegreeCentrality) {
+					if (algoVerbose)
+						System.out.println("EXECUTING DEGREE CENTRALITY");
+					DegreeCentralityAnalysis DCAnalysis = new DegreeCentralityAnalysis(graphDB);
+					DCAnalysis.getDegreeCentrality(graphDB, algoVerbose);
+				}
 				/**
 				 * CYPHERS
 				 */
@@ -504,15 +512,9 @@ public class EmbeddedNeo4j {
 					 * CALL OF ALGORITHMS ON GRAPHS/SUBGRAPHS
 					 */
 
-//				@SuppressWarnings("unused")
-//				String betweenness = "CALL gds.betweenness.stream(\n" + 
-//					" 'SUBGRAPH'\n" + 
-//					")\n" + 
-//					"YIELD\n" + 
-//					"  nodeId,\n" + 
-//					"  score \n" +
-//					"RETURN gds.util.asNode(nodeId).name AS Name, score\n"+
-//					"ORDER BY score ASC;";				
+					@SuppressWarnings("unused")
+					String betweenness = "CALL gds.betweenness.stream(\n" + " 'SUBGRAPH'\n" + ")\n" + "YIELD\n" + "  nodeId,\n" + "  score \n"
+							+ "RETURN gds.util.asNode(nodeId).name AS Name, score\n" + "ORDER BY score ASC;";
 
 //				@SuppressWarnings("unused")
 //				String allShortestPaths = "CALL gds.alpha.allShortestPaths.stream(\n"
@@ -536,16 +538,9 @@ public class EmbeddedNeo4j {
 //							+ "  relationshipProjection: {\n" + "    IS_FRIEND_OF: {\n" + "      type: 'IS_FRIEND_OF',\n"
 //							+ "      properties: 'weight'\n" + "    }\n" + "  },\n" + "  relationshipWeightProperty: 'weight'\n" + "})\n"
 //							+ "YIELD sourceNodeId, targetNodeId, distance";
-					String allShortestPathsEdgeList = "CALL gds.alpha.allShortestPaths.stream({ \n" 
-							+ " nodeProjection: 'USER',\n"
-							+ " relationshipProjection: {\n"
-							+ "		IS_FRIEND_OF: {\n"
-							+ "			properties: 'weight'\n"
-							+ "		}\n"
-							+ "	},\n"
-							+ "  relationshipWeightProperty: 'weight'\n" 
-							+ "})\n"
-							+ "YIELD sourceNodeId, targetNodeId, distance";
+					String allShortestPathsEdgeList = "CALL gds.alpha.allShortestPaths.stream({ \n" + " nodeProjection: 'USER',\n"
+							+ " relationshipProjection: {\n" + "		IS_FRIEND_OF: {\n" + "			properties: 'weight'\n" + "		}\n"
+							+ "	},\n" + "  relationshipWeightProperty: 'weight'\n" + "})\n" + "YIELD sourceNodeId, targetNodeId, distance";
 
 					@SuppressWarnings("unused")
 					String allShortestPaths = "CALL gds.alpha.allShortestPaths.stream(\n" + "{nodeProjection: 'USER',\n"
@@ -573,9 +568,12 @@ public class EmbeddedNeo4j {
 							+ "RETURN gds.util.asNode(nodeId).name AS name, score\n" + "ORDER BY score DESC " + "LIMIT 25";
 
 					@SuppressWarnings("unused")
-					String degreeCentrality = "CALL gds.alpha.degree.stream(\n" + " 'SUBGRAPH')\n" + "YIELD \n" + "  nodeId,score \n"
+					String degreeCentrality = "CALL gds.alpha.degree.stream('SUBGRAPH', { concurrency: 1})\n" + "YIELD \n" + "  nodeId,score \n"
 							+ "RETURN gds.util.asNode(nodeId).name AS name, score AS followers \n" + "ORDER BY followers DESC, name DESC";
 
+					String degreeCentralityConcurrent4 = "CALL gds.alpha.degree.stream('SUBGRAPH')\n" + "YIELD \n" + "  nodeId,score \n"
+							+ "RETURN gds.util.asNode(nodeId).name AS name, score AS followers \n" + "ORDER BY followers DESC, name DESC";
+					
 					@SuppressWarnings("unused")
 					String pageRankWeighted = "CALL gds.pageRank.stream('SUBGRAPH') YIELD nodeId, score AS pageRank\n"
 							+ "WITH gds.util.asNode(nodeId) AS n, pageRank\n" + "MATCH (n)-[i:IS_CONNECTED]-()\n"
@@ -612,21 +610,24 @@ public class EmbeddedNeo4j {
 					/**
 					 * SUBGRAPHCREATION
 					 */
-//				ExEngine.runQuery(createFullGraphByCypher, true, true, " ");
+				System.out.println("=== SUBGRAPHCREATION");
+//					ExEngine.runQuery(createFullGraphByCypher, true, true, " ");
 //				ExEngine.runQuery(createSubGraphMovieDB, true, false, " ");
 //				ExEngine.runQuery(createSubGraphEdgelist, false, true, "");
 //				ExEngine.runQuery(createSubGraphEdgelistReverseOriented, true, false, "");
-//				ExEngine.runQuery(createGraphALL, false ,false, "");
+				long startFull = System.currentTimeMillis();
+				ExEngine.runQuery(createGraphALL, false ,false, "");
 
 					// show that the graph is created
 //				ExEngine.runQuery("CALL gds.graph.list()", true, true, "");
 					/**
 					 * ALGOS
 					 */
+				System.out.println("=== ALGOEXECUTION");
 //				ExEngine.runQuery(allShortestPaths, true, false, " ");
 //					ExEngine.runQuery("MATCH (n:USER)-[r]->(m:USER) RETURN r.weight,r.type, count(r)", true, false, "");
-					
-					ExEngine.runQuery(allShortestPathsEdgeList, false, false, "|");
+
+//					ExEngine.runQuery(allShortestPathsEdgeList, false, false, "|");
 //				ExEngine.runQuery(pageRank, true, true);
 
 					//
@@ -637,9 +638,16 @@ public class EmbeddedNeo4j {
 ////			ExEngine.runQuery(get_herr, true, true);
 //				ExEngine.runQuery(hits, true, false, " ");
 //				ExEngine.runQuery(simRank, true, false, "|");
-//				ExEngine.runQuery(degreeCentrality, false, false, "|");
+				ExEngine.runQuery(degreeCentrality, false, false, "|");
+//				ExEngine.runQuery(degreeCentralityConcurrent4, false, false, "|");
 
+				
 //				ExEngine.runQuery(JACCARD, true, false, "|");
+				System.out.println("=== SUBGRAPHREMOVAL");
+				ExEngine.runQuery(removeSubgraphByCypher, false, false, " ");
+				long runTimeFull = System.currentTimeMillis()-startFull;
+				System.out.println("RUNTIME ALL CYPHERS: " + runTimeFull);
+
 				}
 				if (doExport)
 					ExEngine.exportDBtoFile(outputFile, true, false, "");
@@ -647,7 +655,6 @@ public class EmbeddedNeo4j {
 ////			String endNode = "bums";
 ////			String startNode = "bums";
 ////			ExEngine.runShortestPathByCypher(startNode, endNode, true);
-//				ExEngine.runQuery(removeSubgraphByCypher, false, false, " ");
 			}
 		}
 

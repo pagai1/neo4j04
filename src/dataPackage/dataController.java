@@ -533,8 +533,12 @@ public class dataController {
 //				}
 
 			}
+//			System.out.println(full_person_list.size());
+//			System.out.println(full_actor_list.size());
+//			System.out.println(full_director_list.size());
 			roleList.clear();
 			for (String value : full_person_list) {
+				
 				personMap.put("ACTOR", false);
 				personMap.put("DIRECTOR", false);
 				if (full_actor_list.contains(value)) {
@@ -717,7 +721,6 @@ public class dataController {
 				}
 
 			}
-
 		}
 	}
 
@@ -751,7 +754,7 @@ public class dataController {
 			Node searchNode = tx.findNode(inputLabel, property, name);
 			if (searchNode != null) {
 				found = true;
-//				System.out.println("FOUND: " + searchNode.getProperty("name"));
+				System.out.println("FOUND: " + searchNode.getProperty("name"));
 			}
 		}
 		return found;
@@ -1488,10 +1491,15 @@ public class dataController {
 						Relationship relationship1 = (tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 2])
 								.createRelationshipTo(tx.findNode(nodeLabel, "id", line[index_first_edge_attribute - 1]), edgeLabel));
 						for (int j = index_first_edge_attribute; j < line.length; j++) {
-							relationship1.setProperty(headers[j].replace("\"", ""), line[j].replace("\"", ""));
+							if (headers[j].contains("count")) {
+								relationship1.setProperty("count", Integer.valueOf(line[j].replace("\"", "")));
+							} else {
+								relationship1.setProperty(headers[j].replace("\"", ""), line[j].replace("\"", ""));
+							}
 							if (verbose) {
 								System.out.println(" " + headers[j] + " = " + line[j]);
 							}
+
 						}
 						if (verbose)
 							System.out.println(

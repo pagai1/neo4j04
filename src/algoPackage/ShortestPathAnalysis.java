@@ -95,7 +95,7 @@ public class ShortestPathAnalysis {
 		pathCounter=0;
 		fullStartTime = System.currentTimeMillis();
 		String weightString = "weight";
-		if (relationShipType == RelationshipTypes.IS_CONNECTED) weightString = "count";
+//		if (relationShipType == RelationshipTypes.IS_CONNECTED) weightString = "count";
 				
 		if (verbose)
 			System.out.println("SHORTEST PATH - " + method + " - CREATING PATHFINDERS...");
@@ -296,7 +296,6 @@ public class ShortestPathAnalysis {
 		startTimeSingle = System.nanoTime();
 		Path singlePathDijkstra = finderDijkstra.findSinglePath(startNode, endNode);
 		endTimeSingle = System.nanoTime();
-		System.out.println(endTimeSingle);
 		if (verbose) {
 			print_path(singlePathDijkstra, startNode, endNode);
 			System.out.printf("%.9f s.\n", (double) ((endTimeSingle - startTimeSingle) / 1000000000.0));

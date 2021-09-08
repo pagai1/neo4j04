@@ -31,15 +31,17 @@ public class DegreeCentralityAnalysis {
 				degreeList.put((String) tmpNode.getProperty("name"), tmpNode.getDegree());
 			}
 		}
+		System.out.println("LISTSIZE: " + degreeList.size());
 		Map<String, Integer> sortedDegreeList = degreeList.entrySet().stream().sorted(Map.Entry.comparingByValue())
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new));
-		int nodeCounter = sortedDegreeList.size(); 
 		algoEndTime = System.currentTimeMillis();
-		System.out.println("GOT SORTED DEGREES FOR " + nodeCounter + " NODES IN " + (algoEndTime - algoStartTime) + " ms.");
+		int nodeCounter = sortedDegreeList.size(); 
 		if (verbose) {
 			for (Map.Entry<String, Integer> entryOfList : sortedDegreeList.entrySet()) {
 				System.out.println(entryOfList.getKey() + "\t - " + entryOfList.getValue());
 			}
 		}
+		System.out.println("GOT SORTED DEGREES FOR " + nodeCounter + " NODES IN " + (algoEndTime - algoStartTime) + " ms.");
+
 	}
 }
